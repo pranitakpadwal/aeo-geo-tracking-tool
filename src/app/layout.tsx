@@ -32,6 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 New scan
               </Link>
+              <Link href="/bulk-scan" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
+                Bulk scan
+              </Link>
               <Link href="/history" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 History
               </Link>

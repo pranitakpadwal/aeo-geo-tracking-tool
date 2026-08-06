@@ -37,11 +37,94 @@ guess.
 
 ## Pages
 
-- `/` — new scan form
+- `/` — quick single-brand scan (auto-generated prompts, mention detection
+  only — see "Two scan modes" below)
 - `/scan/[id]` — citation rate, share of voice vs named competitors, site
   readiness checklist, and every prompt with its full simulated answer
   (expand to read)
-- `/history` — all past scans
+- `/bulk-scan` — import a topic/keyword list (e.g. a SEMrush export bucketed
+  into topics) and run the full citation report across all of it, grounded
+  with real web search
+- `/bulk-scan/[id]` — the report: site-level mentions/citations/share of
+  citations vs. every competitor, topic-level breakdown with a "leader" per
+  topic, and week-over-week movement once you've run it more than once for
+  the same brand
+- `/history` — all past quick scans
+
+## Two scan modes — and why they're different
+
+**Quick scan (`/`, `src/lib/scans.ts`)** — ungrounded. Claude is asked to
+answer "the way an AI assistant would," from its own knowledge, no tools.
+Cheap and fast, good for a first look, but it can never produce a real
+citation URL because it never actually looks anything up. Only tracks
+*mentions* (does the brand name appear in the text).
+
+**Bulk scan (`/bulk-scan`, `src/lib/bulk-scan.ts`)** — grounded with Claude's
+`web_search` tool (`answerPromptGrounded` in `src/lib/anthropic.ts`), so the
+response carries real citation URLs Claude actually used. This is what makes
+the *citation* metrics (as opposed to mere name mentions) honest, and it's
+the one built for running a real topic/keyword list — CSV import, weekly
+reruns, trend/movement. It costs more per prompt (a search round-trip, not
+just a completion) and takes longer, by design.
+
+## Report definitions (`src/lib/report.ts`)
+
+These are the exact terms the bulk-scan report uses — worth reading before
+you interpret a number:
+
+| Term | Definition |
+|---|---|
+| **Mention** | The brand name appears anywhere in the AI's answer text (plain string match, `src/lib/analyze.ts`) |
+| **Citation** | The answer's real citations include a URL whose hostname matches the brand's (or a competitor's) domain — only possible because bulk scans are web-search-grounded |
+| **Cited URL** | The specific page that showed up as a citation |
+| **Coverage / mention rate / citation rate** | % of topics in the run where that brand was mentioned / cited |
+| **Share of citations** | A brand's citations ÷ total citations across brand + all competitors in that run — one AI-visibility number |
+| **Leader (per topic)** | Whichever brand had the most citations for that topic (mentions as tiebreak) |
+| **Movement** | Percentage-point change in mention/citation rate vs. the *previous* bulk scan for the same brand+domain — meaningless without a repeatable cadence (weekly recommended; see below) |
+
+A competitor only gets citation-level tracking (not just mentions) if you
+gave it a domain — see the CSV/competitor format below.
+
+## Running a bulk citation scan
+
+### From the browser (`/bulk-scan`)
+
+1. Brand name + **website** (required — citations are matched against it).
+2. Competitors, one per line: `Name, domain` (domain optional, but no
+   domain means that competitor only gets mention tracking, not citations).
+3. Upload a topics CSV. Required column: `topic`. Optional: `type`,
+   `priority_tier`, `volume` (anything else is ignored, so a raw SEMrush/
+   keyword-tool export with extra columns works as-is).
+4. Submit — you're redirected to `/bulk-scan/[id]`, which polls and fills in
+   live as topics complete, then shows the full report once done.
+
+### From the CLI (`scripts/run-bulk-scan.mts`) — better for large lists
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run bulk-scan -- \
+  --brand "Nykaa" --domain nykaa.com \
+  --competitors "Purplle:purplle.com,Myntra:myntra.com,Amazon.in:amazon.in,Tira:tirabeauty.com,AJIO:ajio.com" \
+  --topics scripts/data/nykaa-topics-p0-p1.csv
+```
+
+Writes to the same SQLite DB the web app reads, so the run shows up at
+`/bulk-scan/[id]` (the id is printed at the end) same as a browser-submitted
+one. `scripts/data/nykaa-topics-p0-p1.csv` is the P0+P1 topic list (144
+topics, ~83M of 89M total keyword volume) extracted from a SEMrush-based
+topic-priority workbook — replace it with your own export in the same
+`topic,type,priority_tier,volume` shape.
+
+### Cost/scale notes
+
+Each topic costs: a share of a batched "turn this topic into a shopper
+question" call (15 topics per batch) + one grounded `web_search` call. The
+API route caps a single run at 500 topics; for more, split into batches (the
+CLI script has no such cap, but mind your rate limits). For weekly
+tracking, re-run the *same* topic/competitor set on a schedule (a Claude
+Code Remote Routine hitting the CLI script, or your own cron against
+`POST /api/bulk-scan`) — movement is computed by diffing consecutive runs for
+the same brand+domain, so consistency across runs matters more than
+frequency.
 
 ## Honesty about what this is and isn't
 

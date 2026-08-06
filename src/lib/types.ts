@@ -45,3 +45,67 @@ export interface SiteAudit {
   score: number; // 0-100
   checks: SiteAuditCheck[];
 }
+
+// --- Bulk scans: a large imported topic/keyword list run through the same
+// citation check as a manual scan, one topic per row, grounded with real web
+// search so results carry actual cited URLs (not just name mentions). ---
+
+export interface CompetitorInput {
+  name: string;
+  domain?: string; // needed for citation-URL attribution; mention detection works without it
+}
+
+export interface BulkScanTopicInput {
+  topic: string;
+  type?: string;
+  priorityTier?: string;
+  volume?: number;
+}
+
+export interface BulkScanInput {
+  brand: string;
+  domain?: string;
+  competitors: CompetitorInput[];
+  topics: BulkScanTopicInput[];
+}
+
+export interface BulkScanRecord {
+  id: string;
+  brand: string;
+  domain: string | null;
+  competitors: CompetitorInput[];
+  status: "pending" | "running" | "complete" | "error";
+  error: string | null;
+  totalTopics: number;
+  completedTopics: number;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface CitationRef {
+  url: string;
+  title: string | null;
+}
+
+export interface BulkScanTopicResult {
+  id: number;
+  idx: number;
+  topic: string;
+  type: string | null;
+  priorityTier: string | null;
+  volume: number | null;
+  question: string | null;
+  responseText: string | null;
+  brandMentioned: boolean;
+  brandPosition: number | null;
+  competitorsMentioned: Record<string, boolean>;
+  brandCitations: CitationRef[];
+  competitorCitations: Record<string, CitationRef[]>;
+  otherCitations: CitationRef[];
+  status: "pending" | "done" | "error";
+  error: string | null;
+}
+
+export interface BulkScanDetail extends BulkScanRecord {
+  topics: BulkScanTopicResult[];
+}
