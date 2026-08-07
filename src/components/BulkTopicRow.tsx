@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { BulkScanTopicResult } from "@/lib/types";
 
 function StatusDot({ mentioned, cited }: { mentioned: boolean; cited: boolean }) {
-  const color = cited ? "var(--accent)" : mentioned ? "var(--warn)" : "var(--border)";
+  const color = cited ? "var(--good)" : mentioned ? "var(--warn)" : "var(--border)";
   return <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: color }} />;
 }
 
@@ -23,23 +23,23 @@ export default function BulkTopicRow({
   const brandCited = result.brandCitations.length > 0;
 
   return (
-    <div style={{ borderBottom: "1px solid var(--border)" }}>
+    <div style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
         style={{
           width: "100%",
           textAlign: "left",
-          background: "none",
+          background: open ? "var(--bg-alt)" : "var(--bg-elevated)",
           border: "none",
           color: "inherit",
-          padding: "12px 8px",
+          padding: "10px 10px",
           cursor: "pointer",
           display: "grid",
           gridTemplateColumns: "1.6fr 0.6fr 0.7fr 1.2fr auto",
           gap: 10,
           alignItems: "center",
           fontFamily: "inherit",
-          fontSize: 13,
+          fontSize: 12.5,
         }}
       >
         <span>
@@ -74,12 +74,12 @@ export default function BulkTopicRow({
         <span style={{ color: "var(--text-muted)" }}>{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div style={{ padding: "0 8px 16px", fontSize: 13 }}>
+        <div style={{ padding: "0 10px 16px", fontSize: 12.5, background: "var(--bg-alt)" }}>
           {result.status === "error" ? (
             <div style={{ color: "var(--danger)" }}>Failed: {result.error}</div>
           ) : (
             <>
-              <div style={{ color: "var(--text-muted)", marginBottom: 8 }}>
+              <div style={{ color: "var(--text-muted)", marginBottom: 8, fontStyle: "italic" }}>
                 Question asked: <em>{result.question}</em>
               </div>
               {result.brandCitations.length > 0 && (
@@ -98,7 +98,7 @@ export default function BulkTopicRow({
                     <div key={name} style={{ marginBottom: 6 }}>
                       <strong>{name} cited:</strong>{" "}
                       {urls.map((c) => (
-                        <a key={c.url} href={c.url} target="_blank" rel="noreferrer" style={{ color: "var(--text-muted)", marginRight: 10 }}>
+                        <a key={c.url} href={c.url} target="_blank" rel="noreferrer" style={{ color: "var(--series-3)", marginRight: 10 }}>
                           {c.title || c.url}
                         </a>
                       ))}
@@ -109,9 +109,12 @@ export default function BulkTopicRow({
                 className="mono"
                 style={{
                   whiteSpace: "pre-wrap",
-                  fontSize: 12,
+                  fontSize: 11.5,
                   lineHeight: 1.6,
                   color: "var(--text-muted)",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border-soft)",
+                  padding: "10px 12px",
                   marginTop: 10,
                   maxHeight: 260,
                   overflowY: "auto",

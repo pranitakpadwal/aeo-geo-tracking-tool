@@ -57,7 +57,7 @@ export default async function ScanPage({
           style={{
             border: "1px solid var(--danger)",
             color: "var(--danger)",
-            borderRadius: 8,
+            borderRadius: 4,
             padding: "12px 14px",
             marginBottom: 24,
           }}
@@ -79,7 +79,7 @@ export default async function ScanPage({
             <div
               style={{
                 border: "1px solid var(--border)",
-                borderRadius: 10,
+                borderRadius: 4,
                 padding: 20,
                 background: "var(--bg-elevated)",
               }}
@@ -97,7 +97,7 @@ export default async function ScanPage({
             <div
               style={{
                 border: "1px solid var(--border)",
-                borderRadius: 10,
+                borderRadius: 4,
                 padding: 20,
                 background: "var(--bg-elevated)",
               }}
@@ -156,7 +156,7 @@ export default async function ScanPage({
                         style={{
                           height: "100%",
                           width: `${pct(row.count, total)}%`,
-                          background: row.isBrand ? "var(--accent)" : "#5a6472",
+                          background: row.isBrand ? "var(--accent)" : "var(--series-3)",
                         }}
                       />
                     </div>
@@ -179,7 +179,7 @@ export default async function ScanPage({
                       alignItems: "flex-start",
                       fontSize: 13,
                       border: "1px solid var(--border)",
-                      borderRadius: 8,
+                      borderRadius: 4,
                       padding: "10px 12px",
                     }}
                   >
@@ -223,7 +223,7 @@ export default async function ScanPage({
                         style={{
                           width: "100%",
                           height: Math.max(4, rate * 0.5),
-                          background: h.id === scan.id ? "var(--accent)" : "#3a4451",
+                          background: h.id === scan.id ? "var(--accent)" : "var(--text-faint)",
                           borderRadius: 3,
                         }}
                       />

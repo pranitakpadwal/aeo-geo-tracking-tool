@@ -1,16 +1,38 @@
 @import "tailwindcss";
 
+/*
+ * Report-style light theme — deliberately matches the business-report PDFs
+ * this tool's output is meant to sit alongside (white page, black-header
+ * tables, pink accent, semantic green/red/amber status). Not a generic app
+ * dark-mode token set; single-theme on purpose, same as a printed report.
+ */
 :root {
-  --bg: #0b0f14;
-  --bg-elevated: #11161d;
-  --border: #232b35;
-  --text: #e8edf2;
-  --text-muted: #8b97a5;
-  --accent: #4fd1c5;
-  --accent-strong: #2dd4bf;
-  --warn: #f6ad55;
-  --danger: #fc8181;
-  --good: #68d391;
+  --bg: #ececec;
+  --bg-elevated: #ffffff;
+  --bg-alt: #f6f6f7;
+  --border: #d8d8d8;
+  --border-soft: #e6e6e6;
+  --text: #1a1a1a;
+  --text-muted: #5a5a5a;
+  --text-faint: #8a8a8a;
+
+  --accent: #e5017e;
+  --accent-soft: #fbe6f2;
+  --table-head: #1a1a1a;
+
+  --warn: #b8860b;
+  --warn-bg: #fdf0dc;
+  --danger: #b02020;
+  --danger-bg: #fbe7e7;
+  --good: #1a7a1a;
+  --good-bg: #dcf3dc;
+
+  /* rotating palette for competitor series in charts/bars beyond the accent */
+  --series-2: #fd9801;
+  --series-3: #4a8fd7;
+  --series-4: #7c5cd6;
+  --series-5: #2f9e6f;
+  --series-6: #b0552f;
 }
 
 * {
@@ -21,7 +43,7 @@ html,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Iowan Old Style", "Georgia", "Charter", serif;
+  font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
 }
 
 body {
@@ -30,6 +52,7 @@ body {
 
 .mono {
   font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 a {
@@ -38,5 +61,5 @@ a {
 
 ::selection {
   background: var(--accent);
-  color: #06110f;
+  color: #fff;
 }

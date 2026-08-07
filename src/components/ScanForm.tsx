@@ -137,7 +137,7 @@ export default function ScanForm() {
         disabled={loading}
         style={{
           background: loading ? "var(--border)" : "var(--accent)",
-          color: "#06110f",
+          color: "#fff",
           border: "none",
           borderRadius: 8,
           padding: "12px 20px",

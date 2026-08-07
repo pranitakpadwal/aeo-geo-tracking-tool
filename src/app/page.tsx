@@ -21,8 +21,9 @@ export default function HomePage() {
         <div
           style={{
             border: "1px solid var(--warn)",
-            color: "var(--warn)",
-            borderRadius: 8,
+            background: "var(--warn-bg)",
+            color: "#7a5f00",
+            borderRadius: 4,
             padding: "12px 14px",
             fontSize: 14,
             marginBottom: 24,
@@ -63,7 +64,7 @@ export default function HomePage() {
             key={f.title}
             style={{
               border: "1px solid var(--border)",
-              borderRadius: 10,
+              borderRadius: 4,
               padding: 18,
               background: "var(--bg-elevated)",
             }}

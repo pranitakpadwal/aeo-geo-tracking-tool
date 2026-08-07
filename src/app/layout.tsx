@@ -15,8 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
           <header
             style={{
-              borderBottom: "1px solid var(--border)",
-              padding: "18px 24px",
+              background: "var(--bg-elevated)",
+              borderBottom: "3px solid var(--accent)",
+              padding: "16px 24px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -24,11 +25,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           >
             <Link
               href="/"
-              style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.01em", textDecoration: "none" }}
+              style={{
+                fontSize: 19,
+                fontWeight: 800,
+                letterSpacing: "0.02em",
+                textDecoration: "none",
+                color: "var(--accent)",
+              }}
             >
-              Citable<span style={{ color: "var(--accent)" }}>.</span>
+              CITABLE
             </Link>
-            <nav style={{ display: "flex", gap: 20, fontSize: 14 }}>
+            <nav style={{ display: "flex", gap: 22, fontSize: 13.5 }}>
               <Link href="/" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 New scan
               </Link>
@@ -40,12 +47,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
             </nav>
           </header>
-          <main style={{ flex: 1 }}>{children}</main>
+          <main style={{ flex: 1, background: "var(--bg)" }}>{children}</main>
           <footer
             style={{
+              background: "var(--bg-elevated)",
               borderTop: "1px solid var(--border)",
               padding: "16px 24px",
-              fontSize: 12,
+              fontSize: 11.5,
+              fontStyle: "italic",
               color: "var(--text-muted)",
             }}
           >
