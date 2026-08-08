@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
         .map((t) => ({
           topic: String(t.topic || "").trim(),
           type: t.type ? String(t.type).trim() : undefined,
+          category: t.category ? String(t.category).trim() : undefined,
           priorityTier: t.priorityTier ? String(t.priorityTier).trim() : undefined,
           volume: typeof t.volume === "number" ? t.volume : undefined,
         }))

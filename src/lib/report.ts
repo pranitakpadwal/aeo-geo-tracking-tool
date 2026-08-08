@@ -59,7 +59,7 @@ export interface BulkScanReport {
 // extra LLM calls. ---
 
 export interface ThemeBreakdownRow {
-  theme: string; // the `type` column the user supplied in their CSV import (not a keyword-inferred category)
+  theme: string; // the `category` (sub-vertical) the user supplied, falling back to `type` if no category was imported
   topicsCount: number;
   leader: string | null;
   perBrand: Record<string, { mentions: number; citations: number }>;
@@ -73,14 +73,23 @@ export interface CitedPageEntry {
   status: "new" | "continuing" | "lost" | null; // null when there's no previous run to diff against
 }
 
-/** Groups topics by the user-supplied `type` field and rolls mentions/
- * citations/leader up to that theme, same shape as the per-topic report. */
+/**
+ * Groups topics into sub-vertical themes (e.g. Skincare, Lips, Hair Care —
+ * the breakdown under a universe's parent category, "Beauty") and rolls
+ * mentions/citations/leader up to that theme, same shape as the per-topic
+ * report.
+ *
+ * Groups by the user-supplied `category` field when present — that's the
+ * real sub-vertical. Falls back to `type` (usually a content-strategy label
+ * like "Baseline"/"New Product") only when no category was imported, so the
+ * breakdown still means something rather than being empty.
+ */
 export function buildThemeBreakdown(scan: BulkScanDetail): ThemeBreakdownRow[] {
   const names = [scan.brand, ...scan.competitors.map((c) => c.name)];
 
   const groups = new Map<string, BulkScanDetail["topics"]>();
   for (const t of scan.topics) {
-    const theme = t.type?.trim() || "Uncategorized";
+    const theme = t.category?.trim() || t.type?.trim() || "Uncategorized";
     if (!groups.has(theme)) groups.set(theme, []);
     groups.get(theme)!.push(t);
   }

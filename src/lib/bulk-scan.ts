@@ -28,12 +28,12 @@ export function createBulkScan(input: BulkScanInput, universeId?: string | null)
   );
 
   const insertTopic = db.prepare(
-    `INSERT INTO bulk_scan_topics (bulk_scan_id, idx, topic, type, priority_tier, volume, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending')`
+    `INSERT INTO bulk_scan_topics (bulk_scan_id, idx, topic, type, category, priority_tier, volume, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
   );
   const insertMany = db.transaction((topics: BulkScanInput["topics"]) => {
     topics.forEach((t, i) => {
-      insertTopic.run(id, i, t.topic, t.type || null, t.priorityTier || null, t.volume ?? null);
+      insertTopic.run(id, i, t.topic, t.type || null, t.category || null, t.priorityTier || null, t.volume ?? null);
     });
   });
   insertMany(input.topics);
@@ -144,6 +144,7 @@ interface BulkScanTopicRow {
   idx: number;
   topic: string;
   type: string | null;
+  category: string | null;
   priority_tier: string | null;
   volume: number | null;
   question: string | null;
@@ -180,6 +181,7 @@ function rowToTopicResult(row: BulkScanTopicRow): BulkScanTopicResult {
     idx: row.idx,
     topic: row.topic,
     type: row.type,
+    category: row.category,
     priorityTier: row.priority_tier,
     volume: row.volume,
     question: row.question,

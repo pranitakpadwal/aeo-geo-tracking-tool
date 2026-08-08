@@ -57,7 +57,8 @@ export interface CompetitorInput {
 
 export interface BulkScanTopicInput {
   topic: string;
-  type?: string;
+  type?: string; // content-strategy label from the import (e.g. "Baseline", "New Product/Ingredient")
+  category?: string; // the real sub-vertical (e.g. "Skincare", "Lips", "Hair Care") — what theme breakdowns group by
   priorityTier?: string;
   volume?: number;
 }
@@ -93,6 +94,7 @@ export interface BulkScanTopicResult {
   idx: number;
   topic: string;
   type: string | null;
+  category: string | null;
   priorityTier: string | null;
   volume: number | null;
   question: string | null;
@@ -118,6 +120,7 @@ export interface BulkScanDetail extends BulkScanRecord {
 export interface UniverseTopicInput {
   topic: string;
   type?: string;
+  category?: string; // the real sub-vertical (e.g. "Skincare", "Lips") — what theme breakdowns group by
   priorityTier?: string;
   volume?: number;
 }

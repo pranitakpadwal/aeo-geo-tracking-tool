@@ -308,7 +308,8 @@ export default function UniverseView({ id }: { id: string }) {
 
             <h1 style={sectionHeading}>2. Theme Breakdown</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
-              Topics rolled up by the theme/type you set when this universe&rsquo;s topic list was built.
+              Topics rolled up by sub-category (e.g. Skincare, Lips, Hair Care) within this universe — falls
+              back to the topic&rsquo;s type if no category was set on import.
             </p>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 6 }}>

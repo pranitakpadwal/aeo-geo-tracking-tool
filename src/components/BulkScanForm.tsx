@@ -133,9 +133,9 @@ export default function BulkScanForm() {
       </div>
       <div>
         <label style={labelStyle}>
-          Topics CSV — column <span className="mono">topic</span> required; <span className="mono">type</span>,{" "}
-          <span className="mono">priority_tier</span>, <span className="mono">volume</span> optional (extra
-          columns are ignored)
+          Topics CSV — column <span className="mono">topic</span> required; <span className="mono">category</span>,{" "}
+          <span className="mono">type</span>, <span className="mono">priority_tier</span>,{" "}
+          <span className="mono">volume</span> optional (extra columns are ignored)
         </label>
         <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={onFileChange} style={{ fontSize: 14 }} />
         {fileName && (

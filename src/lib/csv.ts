@@ -52,6 +52,7 @@ export function parseCsv(text: string): string[][] {
 export interface CsvTopicRow {
   topic: string;
   type?: string;
+  category?: string;
   priorityTier?: string;
   volume?: number;
 }
@@ -65,6 +66,9 @@ export function parseTopicsCsv(text: string): CsvTopicRow[] {
   const header = rows[0].map((h) => h.trim().toLowerCase().replace(/[\s_]+/g, "_"));
   const topicIdx = header.findIndex((h) => h === "topic" || h === "keyword");
   const typeIdx = header.findIndex((h) => h === "type");
+  // "category" is the real sub-vertical (Skincare, Lips, Hair Care, ...) —
+  // distinct from "type", which is usually a content-strategy label.
+  const categoryIdx = header.findIndex((h) => h === "category" || h === "sub_category" || h === "subcategory");
   const tierIdx = header.findIndex((h) => h === "priority_tier" || h === "tier" || h === "priority");
   const volumeIdx = header.findIndex((h) => h === "volume" || h === "search_volume");
 
@@ -79,6 +83,7 @@ export function parseTopicsCsv(text: string): CsvTopicRow[] {
     .map((r) => ({
       topic: r[topicIdx].trim(),
       type: typeIdx >= 0 ? r[typeIdx]?.trim() || undefined : undefined,
+      category: categoryIdx >= 0 ? r[categoryIdx]?.trim() || undefined : undefined,
       priorityTier: tierIdx >= 0 ? r[tierIdx]?.trim() || undefined : undefined,
       volume: volumeIdx >= 0 && r[volumeIdx] ? Number(r[volumeIdx].replace(/,/g, "")) || undefined : undefined,
     }));

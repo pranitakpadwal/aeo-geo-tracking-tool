@@ -1,145 +1,145 @@
-rank,topic,type,priority_tier,volume,top_matching_keyword,status
-1,Face Wash / Cleanser,New Product/Ingredient,P0,5912300,cetaphil cleanser,Already Doing
-2,Perfumes,Baseline,P0,5628680,perfume,Already Doing
-3,Sun Care,Baseline,P0,3909400,sunscreen,Already Doing
-4,Shampoo,Baseline,P0,3831520,loreal shampoo,Already Doing
-5,Skin Serums,Baseline,P0,2900400,vitamin c serum,Already Doing
-6,Moisturizer,Baseline,P0,2803680,moisturizer,Already Doing
-7,Lip Stick,Baseline,P0,2582520,lipstick,Already Doing
-8,Cetaphil,3rd Party Brand,P0,2417800,cetaphil cleanser,Already Doing
-9,Trimmer,Men's Grooming,P0,1859880,trimmer for men,Already Doing
-10,Hair Styling Tools (Blow Dryer / Straightening Brush),New Product/Ingredient,P0,1459500,hair styler,Already Doing
-11,Hair Color,Baseline,P0,1442280,hair color,Already Doing
-12,Soaps,Baseline,P0,1421600,ghar soaps,Already Doing
-13,Oily skin,AEO Concern Topic,P0,1365500,cetaphil oily skin cleanser,Already Doing
-14,Mamaearth,3rd Party Brand,P0,1322000,mamaearth,Already Doing
-15,Lips,Baseline,P0,1241400,lip balms,Already Doing
-16,Lakme,3rd Party Brand,P0,1197400,lakme,Already Doing
-17,Eye Kajal,Baseline,P0,1090680,kajal,Already Doing
-18,Foundation Cosmetics,Baseline,P0,1049300,foundation,Already Doing
-19,Vitamin C,Baseline,P0,1043400,vitamin c serum,Already Doing
-20,Dry skin,AEO Concern Topic,P0,1041800,moisturiser for dry skin,Already Doing
-21,Hair Styling Products,Baseline,P0,1021400,hair styler,Already Doing
-22,Hair growth,AEO Concern Topic,P0,867200,serum for hair growth,Already Doing
-23,Loreal,3rd Party Brand,P0,757600,loreal shampoo,Already Doing
-24,Himalaya,3rd Party Brand,P0,748600,himalaya,Already Doing
-25,Body Lotions & Moisturizers,Baseline,P0,726780,vaseline body lotion,Already Doing
-26,Plum,3rd Party Brand,P0,694200,plum,Already Doing
-27,Garnier,3rd Party Brand,P0,684300,garnier face wash,Already Doing
-28,Nivea,3rd Party Brand,P0,671700,nivea body lotion,Already Doing
-29,Hair Oils,Baseline,P0,670700,hair oil for hair growth,Already Doing
-30,Ponds,3rd Party Brand,P0,601500,ponds face wash,Already Doing
-31,Facial Kits,New Product/Ingredient,P0,596000,facial kit,Already Doing
-32,Dandruff,AEO Concern Topic,P0,591800,anti dandruff shampoo,Already Doing
-33,Deodorants/Roll-Ons,Baseline,P0,588900,deodorant,Already Doing
-34,Philips (Appliances),3rd Party Brand,P0,581500,philips,Already Doing
-35,Shower Gels & Body Wash,Baseline,P0,576300,body wash,Already Doing
-36,Minimalist,3rd Party Brand,P0,567800,minimalist,Already Doing
-37,Hair Serum,Baseline,P0,552800,streax hair serum,Already Doing
-38,Perfume for men (standalone),AEO Concern Topic,P0,538800,perfume for men,Already Doing
-39,Hair Dryers,Baseline,P0,534400,hair dryer,Already Doing
-40,Makeup Kit / Makeup Set (generic),New Product/Ingredient,P0,518800,makeup kit,Already Doing
-41,Pilgrim,3rd Party Brand,P1,499000,pilgrim,Already Doing
-42,Salicylic Acid (BHA),Baseline,P1,494500,salicylic acid face wash,Already Doing
-43,Hair Conditioners,Baseline,P1,479380,conditioner,Already Doing
-44,Nail Polish / Nail Art,New Product/Ingredient,P1,476400,nail polish,Already Doing
-45,Dot & Key,Baseline,P1,473200,dot and key sunscreen,Already Doing
-46,Aqualogica,3rd Party Brand,P1,444400,aqualogica,Already Doing
-47,Matrix,3rd Party Brand,P1,415100,matrix,Already Doing
-48,Hair fall,AEO Concern Topic,P1,400400,best shampoo for hair fall,Already Doing
-49,Vaseline,3rd Party Brand,P1,388080,vaseline,Already Doing
-50,Dove,3rd Party Brand,P1,386600,dove,Already Doing
-51,Maybelline,3rd Party Brand,P1,380200,maybelline lipstick,Already Doing
-52,Rosemary Water (Hair),New Product/Ingredient,P1,359200,rosemary oil,Already Doing
-53,Victoria,3rd Party Brand,P1,353400,victoria s secret,Already Doing
-54,Tan Removal (reinstated),New Product/Ingredient,P1,344700,tan removal cream,Already Doing
-55,Foxtale,3rd Party Brand,P1,342500,foxtale,Already Doing
-56,Gucci,3rd Party Brand,P1,341800,gucci,Already Doing
-57,Hair Removal Creams,Baseline,P1,339500,hair removal cream,Already Doing
-58,Lip Gloss,Baseline,P1,338800,lip glosses,Already Doing
-59,Sheet Mask / Face Mask,New Product/Ingredient,P1,336900,face mask,Already Doing
-60,Face Wash / Cleanser for Men,Men's Grooming,P1,336300,best face wash for men,Already Doing
-61,Eye Shadow,Baseline,P1,333780,eyeshadow palette,Already Doing
-62,Eyeliner,Baseline,P1,327900,eye liner,Already Doing
-63,Concealer,Baseline,P1,327000,concealer,Already Doing
-64,Skin cream,Baseline,P1,326500,face cream,Already Doing
-65,Beard Oil / Beard Care,Men's Grooming,P1,324000,beard oil,Already Doing
-66,Aloe Vera Gel,New Product/Ingredient,P1,315800,aloe vera gel,Already Doing
-67,Pears,3rd Party Brand,P1,311400,pears,Already Doing
-68,Makeup,Baseline,P1,297000,girls makeup kit,Already Doing
-69,Deconstruct,3rd Party Brand,P1,293100,deconstruct,Already Doing
-70,Ubtan / Multani Mitti,New Product/Ingredient,P1,289300,multani mitti,Already Doing
-71,Niacinamide,Baseline,P1,280900,niacinamide serum,Already Doing
-72,Mac,3rd Party Brand,P1,279500,mac lipsticks,Already Doing
-73,Skin Whitening / Fairness Cream,New Product/Ingredient,P1,278200,skin whitening cream,Already Doing
-74,Highlighter,Baseline,P1,275100,highlighter,Already Doing
-75,Myglamm,3rd Party Brand,P1,269200,myglamm,Already Doing
-76,Blush,Baseline,P1,268900,blush,Already Doing
-77,Denver,3rd Party Brand,P1,265500,denver perfume,Already Doing
-78,Sebamed,3rd Party Brand,P1,265000,sebamed shampoo,Already Doing
-79,Dyson,3rd Party Brand,P1,262900,dyson,Already Doing
-80,Skin Toner,Baseline,P1,261300,toner,Already Doing
-81,Glycolic Acid (AHA),Baseline,P1,260200,glycolic acid cream,Already Doing
-82,Whisper,3rd Party Brand,P1,259900,whisper pads,Already Doing
-83,Gels & Waxes,Baseline,P1,257200,best hair wax for men,Already Doing
-84,Face Primer,New Product/Ingredient,P1,249000,primer,Already Doing
-85,Makeup Brushes & Tools,New Product/Ingredient,P1,248800,makeup brush,Already Doing
-86,Night Creams,Baseline,P1,245600,night creams,Already Doing
-87,Neutrogena,3rd Party Brand,P1,222500,neutrogena sunscreen,Already Doing
-88,Streax,3rd Party Brand,P1,219700,streax hair serum,Already Doing
-89,Tresemme,3rd Party Brand,P1,217900,tresemme shampoo,Already Doing
-90,Biotique,3rd Party Brand,P1,214600,biotique face wash,Already Doing
-91,Sanitary -napkin Period Panties,Baseline,P1,213900,sanitary pads,Already Doing
-92,Hair Wax And Gel,Baseline,P1,207000,best hair wax for men,Already Doing
-93,Derma Co,3rd Party Brand,P1,206100,the derma co,Already Doing
-94,Bare Anatomy,3rd Party Brand,P1,205000,bare anatomy,Already Doing
-95,Swiss Beauty,3rd Party Brand,P1,204480,swiss beauty lipstick,Already Doing
-96,Ghar Soaps,3rd Party Brand,P1,201000,ghar soaps,Already Doing
-97,Cerave,3rd Party Brand,P1,200500,cerave moisturizer,Already Doing
-98,BB / CC Cream,New Product/Ingredient,P1,198200,bb cream,Already Doing
-99,The Man Company,3rd Party Brand,P1,197600,the man company,Already Doing
-100,Compact Powder,Baseline,P1,195100,compact powder,Already Doing
-101,Wild Stone,3rd Party Brand,P1,192600,wild stone perfume,Already Doing
-102,Dior,3rd Party Brand,P1,191000,dior,Already Doing
-103,Mcaffeine,3rd Party Brand,P1,189200,mcaffeine,Already Doing
-104,Mists/Sprays,Baseline,P1,184500,body mist,Already Doing
-105,Stayfree,3rd Party Brand,P1,181900,stayfree pads,Already Doing
-106,Dr Sheth,3rd Party Brand,P1,181000,dr sheth sunscreen,Already Doing
-107,Dr Sheth's,3rd Party Brand,P1,181000,dr sheth sunscreen,Already Doing
-108,Press-on Nails / Nail Extensions,New Product/Ingredient,P1,171200,nail extension,Already Doing
-109,Skincare Tools (Gua Sha / Ice Roller / Face Massager),New Product/Ingredient,P1,169300,guasha,Already Doing
-110,Vlcc,3rd Party Brand,P1,169300,vlcc,Already Doing
-111,Versace,3rd Party Brand,P1,168000,versace perfumes,Already Doing
-112,Wishcare,3rd Party Brand,P1,165000,wishcare,Already Doing
-113,Adilqadri,3rd Party Brand,P1,165000,adilqadri,Already Doing
-114,Dark spots,AEO Concern Topic,P1,161800,dark spot removal cream,Already Doing
-115,Body Scrubs & Exfoliants,Baseline,P1,159300,body scrub,Already Doing
-116,Body Scrub / Exfoliator,New Product/Ingredient,P1,157700,body scrub,Already Doing
-117,Ajmal,3rd Party Brand,P1,156100,ajmal perfume,Already Doing
-118,Forest Essentials,3rd Party Brand,P1,155600,forest essentials,Already Doing
-119,Gillette,3rd Party Brand,P1,146500,gillette,Already Doing
-120,Eye Mascara,Baseline,P1,146300,mascara,Already Doing
-121,Hair Masks,Baseline,P1,142800,hair mask,Already Doing
-122,Mederma,3rd Party Brand,P1,141100,mederma cream,Already Doing
-123,Wax & Wax Strips,Baseline,P1,139900,veet wax strips,Already Doing
-124,Bblunt,3rd Party Brand,P1,137500,bblunt,Already Doing
-125,Vega (Appliances),3rd Party Brand,P1,136800,vega,Already Doing
-126,Indus Valley,3rd Party Brand,P1,135800,indus valley,Already Doing
-127,Hyphen,3rd Party Brand,P1,135000,hyphen,Already Doing
-128,Traya,3rd Party Brand,P1,135000,traya,Already Doing
-129,Man Matters,3rd Party Brand,P1,135000,man matters,Already Doing
-130,Vwash,3rd Party Brand,P1,135000,vwash,Already Doing
-131,Bombay Shaving Company,3rd Party Brand,P1,133300,bombay shaving company,Already Doing
-132,Under Eye Cream/Serum,New Product/Ingredient,P1,129200,under eye cream,Already Doing
-133,Combination skin,AEO Concern Topic,P1,128100,face wash for combination skin,Already Doing
-134,Hand Wash,Baseline,P1,128000,hand wash,Already Doing
-135,Frizzy hair,AEO Concern Topic,P1,125700,hair mask for frizzy hair,Already Doing
-136,Faces Canada,3rd Party Brand,P1,124600,faces canada,Already Doing
-137,Hair Extensions,Baseline,P1,120900,hair extensions,Already Doing
-138,Sunscreen for Men,Men's Grooming,P1,119600,sunscreen for men,Already Doing
-139,Sulphate free,AEO Concern Topic,P1,114600,sulphate free shampoo,Already Doing
-140,Face Sunscreen,Baseline,P1,111500,best sunscreen for face,Already Doing
-141,Oziva,3rd Party Brand,P1,110000,oziva,Already Doing
-142,Beardo,3rd Party Brand,P1,104600,beardo perfume,Already Doing
-143,Bvlgari,3rd Party Brand,P1,104300,bvlgari,Already Doing
-144,Lux,3rd Party Brand,P1,101900,lux body wash,Already Doing
+rank,topic,category,type,priority_tier,volume,top_matching_keyword,status
+1,Face Wash / Cleanser,Skincare,New Product/Ingredient,P0,5912300,cetaphil cleanser,Already Doing
+2,Perfumes,Fragrance,Baseline,P0,5628680,perfume,Already Doing
+3,Sun Care,Skincare,Baseline,P0,3909400,sunscreen,Already Doing
+4,Shampoo,Hair Care,Baseline,P0,3831520,loreal shampoo,Already Doing
+5,Skin Serums,Skincare,Baseline,P0,2900400,vitamin c serum,Already Doing
+6,Moisturizer,Skincare,Baseline,P0,2803680,moisturizer,Already Doing
+7,Lip Stick,Lips,Baseline,P0,2582520,lipstick,Already Doing
+8,Cetaphil,Other/Brand,3rd Party Brand,P0,2417800,cetaphil cleanser,Already Doing
+9,Trimmer,Other/Brand,Men's Grooming,P0,1859880,trimmer for men,Already Doing
+10,Hair Styling Tools (Blow Dryer / Straightening Brush),Hair Care,New Product/Ingredient,P0,1459500,hair styler,Already Doing
+11,Hair Color,Other/Brand,Baseline,P0,1442280,hair color,Already Doing
+12,Soaps,Body Care,Baseline,P0,1421600,ghar soaps,Already Doing
+13,Oily skin,Other/Brand,AEO Concern Topic,P0,1365500,cetaphil oily skin cleanser,Already Doing
+14,Mamaearth,Other/Brand,3rd Party Brand,P0,1322000,mamaearth,Already Doing
+15,Lips,Other/Brand,Baseline,P0,1241400,lip balms,Already Doing
+16,Lakme,Other/Brand,3rd Party Brand,P0,1197400,lakme,Already Doing
+17,Eye Kajal,Eye Makeup,Baseline,P0,1090680,kajal,Already Doing
+18,Foundation Cosmetics,Face Makeup,Baseline,P0,1049300,foundation,Already Doing
+19,Vitamin C,Skincare,Baseline,P0,1043400,vitamin c serum,Already Doing
+20,Dry skin,Other/Brand,AEO Concern Topic,P0,1041800,moisturiser for dry skin,Already Doing
+21,Hair Styling Products,Hair Care,Baseline,P0,1021400,hair styler,Already Doing
+22,Hair growth,Other/Brand,AEO Concern Topic,P0,867200,serum for hair growth,Already Doing
+23,Loreal,Other/Brand,3rd Party Brand,P0,757600,loreal shampoo,Already Doing
+24,Himalaya,Other/Brand,3rd Party Brand,P0,748600,himalaya,Already Doing
+25,Body Lotions & Moisturizers,Skincare,Baseline,P0,726780,vaseline body lotion,Already Doing
+26,Plum,Other/Brand,3rd Party Brand,P0,694200,plum,Already Doing
+27,Garnier,Other/Brand,3rd Party Brand,P0,684300,garnier face wash,Already Doing
+28,Nivea,Other/Brand,3rd Party Brand,P0,671700,nivea body lotion,Already Doing
+29,Hair Oils,Hair Care,Baseline,P0,670700,hair oil for hair growth,Already Doing
+30,Ponds,Other/Brand,3rd Party Brand,P0,601500,ponds face wash,Already Doing
+31,Facial Kits,Other/Brand,New Product/Ingredient,P0,596000,facial kit,Already Doing
+32,Dandruff,Hair Care,AEO Concern Topic,P0,591800,anti dandruff shampoo,Already Doing
+33,Deodorants/Roll-Ons,Body Care,Baseline,P0,588900,deodorant,Already Doing
+34,Philips (Appliances),Other/Brand,3rd Party Brand,P0,581500,philips,Already Doing
+35,Shower Gels & Body Wash,Body Care,Baseline,P0,576300,body wash,Already Doing
+36,Minimalist,Other/Brand,3rd Party Brand,P0,567800,minimalist,Already Doing
+37,Hair Serum,Skincare,Baseline,P0,552800,streax hair serum,Already Doing
+38,Perfume for men (standalone),Fragrance,AEO Concern Topic,P0,538800,perfume for men,Already Doing
+39,Hair Dryers,Hair Care,Baseline,P0,534400,hair dryer,Already Doing
+40,Makeup Kit / Makeup Set (generic),Other/Brand,New Product/Ingredient,P0,518800,makeup kit,Already Doing
+41,Pilgrim,Other/Brand,3rd Party Brand,P1,499000,pilgrim,Already Doing
+42,Salicylic Acid (BHA),Skincare,Baseline,P1,494500,salicylic acid face wash,Already Doing
+43,Hair Conditioners,Hair Care,Baseline,P1,479380,conditioner,Already Doing
+44,Nail Polish / Nail Art,Other/Brand,New Product/Ingredient,P1,476400,nail polish,Already Doing
+45,Dot & Key,Other/Brand,Baseline,P1,473200,dot and key sunscreen,Already Doing
+46,Aqualogica,Other/Brand,3rd Party Brand,P1,444400,aqualogica,Already Doing
+47,Matrix,Other/Brand,3rd Party Brand,P1,415100,matrix,Already Doing
+48,Hair fall,Other/Brand,AEO Concern Topic,P1,400400,best shampoo for hair fall,Already Doing
+49,Vaseline,Other/Brand,3rd Party Brand,P1,388080,vaseline,Already Doing
+50,Dove,Other/Brand,3rd Party Brand,P1,386600,dove,Already Doing
+51,Maybelline,Other/Brand,3rd Party Brand,P1,380200,maybelline lipstick,Already Doing
+52,Rosemary Water (Hair),Other/Brand,New Product/Ingredient,P1,359200,rosemary oil,Already Doing
+53,Victoria,Other/Brand,3rd Party Brand,P1,353400,victoria s secret,Already Doing
+54,Tan Removal (reinstated),Other/Brand,New Product/Ingredient,P1,344700,tan removal cream,Already Doing
+55,Foxtale,Other/Brand,3rd Party Brand,P1,342500,foxtale,Already Doing
+56,Gucci,Other/Brand,3rd Party Brand,P1,341800,gucci,Already Doing
+57,Hair Removal Creams,Other/Brand,Baseline,P1,339500,hair removal cream,Already Doing
+58,Lip Gloss,Lips,Baseline,P1,338800,lip glosses,Already Doing
+59,Sheet Mask / Face Mask,Other/Brand,New Product/Ingredient,P1,336900,face mask,Already Doing
+60,Face Wash / Cleanser for Men,Skincare,Men's Grooming,P1,336300,best face wash for men,Already Doing
+61,Eye Shadow,Eye Makeup,Baseline,P1,333780,eyeshadow palette,Already Doing
+62,Eyeliner,Eye Makeup,Baseline,P1,327900,eye liner,Already Doing
+63,Concealer,Face Makeup,Baseline,P1,327000,concealer,Already Doing
+64,Skin cream,Skincare,Baseline,P1,326500,face cream,Already Doing
+65,Beard Oil / Beard Care,Other/Brand,Men's Grooming,P1,324000,beard oil,Already Doing
+66,Aloe Vera Gel,Other/Brand,New Product/Ingredient,P1,315800,aloe vera gel,Already Doing
+67,Pears,Other/Brand,3rd Party Brand,P1,311400,pears,Already Doing
+68,Makeup,Other/Brand,Baseline,P1,297000,girls makeup kit,Already Doing
+69,Deconstruct,Other/Brand,3rd Party Brand,P1,293100,deconstruct,Already Doing
+70,Ubtan / Multani Mitti,Other/Brand,New Product/Ingredient,P1,289300,multani mitti,Already Doing
+71,Niacinamide,Skincare,Baseline,P1,280900,niacinamide serum,Already Doing
+72,Mac,Other/Brand,3rd Party Brand,P1,279500,mac lipsticks,Already Doing
+73,Skin Whitening / Fairness Cream,Other/Brand,New Product/Ingredient,P1,278200,skin whitening cream,Already Doing
+74,Highlighter,Face Makeup,Baseline,P1,275100,highlighter,Already Doing
+75,Myglamm,Other/Brand,3rd Party Brand,P1,269200,myglamm,Already Doing
+76,Blush,Face Makeup,Baseline,P1,268900,blush,Already Doing
+77,Denver,Other/Brand,3rd Party Brand,P1,265500,denver perfume,Already Doing
+78,Sebamed,Other/Brand,3rd Party Brand,P1,265000,sebamed shampoo,Already Doing
+79,Dyson,Other/Brand,3rd Party Brand,P1,262900,dyson,Already Doing
+80,Skin Toner,Skincare,Baseline,P1,261300,toner,Already Doing
+81,Glycolic Acid (AHA),Skincare,Baseline,P1,260200,glycolic acid cream,Already Doing
+82,Whisper,Other/Brand,3rd Party Brand,P1,259900,whisper pads,Already Doing
+83,Gels & Waxes,Other/Brand,Baseline,P1,257200,best hair wax for men,Already Doing
+84,Face Primer,Face Makeup,New Product/Ingredient,P1,249000,primer,Already Doing
+85,Makeup Brushes & Tools,Other/Brand,New Product/Ingredient,P1,248800,makeup brush,Already Doing
+86,Night Creams,Other/Brand,Baseline,P1,245600,night creams,Already Doing
+87,Neutrogena,Other/Brand,3rd Party Brand,P1,222500,neutrogena sunscreen,Already Doing
+88,Streax,Other/Brand,3rd Party Brand,P1,219700,streax hair serum,Already Doing
+89,Tresemme,Other/Brand,3rd Party Brand,P1,217900,tresemme shampoo,Already Doing
+90,Biotique,Other/Brand,3rd Party Brand,P1,214600,biotique face wash,Already Doing
+91,Sanitary -napkin Period Panties,Other/Brand,Baseline,P1,213900,sanitary pads,Already Doing
+92,Hair Wax And Gel,Hair Care,Baseline,P1,207000,best hair wax for men,Already Doing
+93,Derma Co,Other/Brand,3rd Party Brand,P1,206100,the derma co,Already Doing
+94,Bare Anatomy,Other/Brand,3rd Party Brand,P1,205000,bare anatomy,Already Doing
+95,Swiss Beauty,Other/Brand,3rd Party Brand,P1,204480,swiss beauty lipstick,Already Doing
+96,Ghar Soaps,Body Care,3rd Party Brand,P1,201000,ghar soaps,Already Doing
+97,Cerave,Other/Brand,3rd Party Brand,P1,200500,cerave moisturizer,Already Doing
+98,BB / CC Cream,Other/Brand,New Product/Ingredient,P1,198200,bb cream,Already Doing
+99,The Man Company,Other/Brand,3rd Party Brand,P1,197600,the man company,Already Doing
+100,Compact Powder,Face Makeup,Baseline,P1,195100,compact powder,Already Doing
+101,Wild Stone,Other/Brand,3rd Party Brand,P1,192600,wild stone perfume,Already Doing
+102,Dior,Other/Brand,3rd Party Brand,P1,191000,dior,Already Doing
+103,Mcaffeine,Other/Brand,3rd Party Brand,P1,189200,mcaffeine,Already Doing
+104,Mists/Sprays,Fragrance,Baseline,P1,184500,body mist,Already Doing
+105,Stayfree,Other/Brand,3rd Party Brand,P1,181900,stayfree pads,Already Doing
+106,Dr Sheth,Other/Brand,3rd Party Brand,P1,181000,dr sheth sunscreen,Already Doing
+107,Dr Sheth's,Other/Brand,3rd Party Brand,P1,181000,dr sheth sunscreen,Already Doing
+108,Press-on Nails / Nail Extensions,Other/Brand,New Product/Ingredient,P1,171200,nail extension,Already Doing
+109,Skincare Tools (Gua Sha / Ice Roller / Face Massager),Other/Brand,New Product/Ingredient,P1,169300,guasha,Already Doing
+110,Vlcc,Other/Brand,3rd Party Brand,P1,169300,vlcc,Already Doing
+111,Versace,Other/Brand,3rd Party Brand,P1,168000,versace perfumes,Already Doing
+112,Wishcare,Other/Brand,3rd Party Brand,P1,165000,wishcare,Already Doing
+113,Adilqadri,Other/Brand,3rd Party Brand,P1,165000,adilqadri,Already Doing
+114,Dark spots,Other/Brand,AEO Concern Topic,P1,161800,dark spot removal cream,Already Doing
+115,Body Scrubs & Exfoliants,Body Care,Baseline,P1,159300,body scrub,Already Doing
+116,Body Scrub / Exfoliator,Body Care,New Product/Ingredient,P1,157700,body scrub,Already Doing
+117,Ajmal,Other/Brand,3rd Party Brand,P1,156100,ajmal perfume,Already Doing
+118,Forest Essentials,Other/Brand,3rd Party Brand,P1,155600,forest essentials,Already Doing
+119,Gillette,Other/Brand,3rd Party Brand,P1,146500,gillette,Already Doing
+120,Eye Mascara,Eye Makeup,Baseline,P1,146300,mascara,Already Doing
+121,Hair Masks,Hair Care,Baseline,P1,142800,hair mask,Already Doing
+122,Mederma,Other/Brand,3rd Party Brand,P1,141100,mederma cream,Already Doing
+123,Wax & Wax Strips,Other/Brand,Baseline,P1,139900,veet wax strips,Already Doing
+124,Bblunt,Other/Brand,3rd Party Brand,P1,137500,bblunt,Already Doing
+125,Vega (Appliances),Other/Brand,3rd Party Brand,P1,136800,vega,Already Doing
+126,Indus Valley,Other/Brand,3rd Party Brand,P1,135800,indus valley,Already Doing
+127,Hyphen,Other/Brand,3rd Party Brand,P1,135000,hyphen,Already Doing
+128,Traya,Other/Brand,3rd Party Brand,P1,135000,traya,Already Doing
+129,Man Matters,Other/Brand,3rd Party Brand,P1,135000,man matters,Already Doing
+130,Vwash,Other/Brand,3rd Party Brand,P1,135000,vwash,Already Doing
+131,Bombay Shaving Company,Other/Brand,3rd Party Brand,P1,133300,bombay shaving company,Already Doing
+132,Under Eye Cream/Serum,Eye Makeup,New Product/Ingredient,P1,129200,under eye cream,Already Doing
+133,Combination skin,Other/Brand,AEO Concern Topic,P1,128100,face wash for combination skin,Already Doing
+134,Hand Wash,Body Care,Baseline,P1,128000,hand wash,Already Doing
+135,Frizzy hair,Other/Brand,AEO Concern Topic,P1,125700,hair mask for frizzy hair,Already Doing
+136,Faces Canada,Other/Brand,3rd Party Brand,P1,124600,faces canada,Already Doing
+137,Hair Extensions,Other/Brand,Baseline,P1,120900,hair extensions,Already Doing
+138,Sunscreen for Men,Skincare,Men's Grooming,P1,119600,sunscreen for men,Already Doing
+139,Sulphate free,Other/Brand,AEO Concern Topic,P1,114600,sulphate free shampoo,Already Doing
+140,Face Sunscreen,Skincare,Baseline,P1,111500,best sunscreen for face,Already Doing
+141,Oziva,Other/Brand,3rd Party Brand,P1,110000,oziva,Already Doing
+142,Beardo,Other/Brand,3rd Party Brand,P1,104600,beardo perfume,Already Doing
+143,Bvlgari,Other/Brand,3rd Party Brand,P1,104300,bvlgari,Already Doing
+144,Lux,Other/Brand,3rd Party Brand,P1,101900,lux body wash,Already Doing

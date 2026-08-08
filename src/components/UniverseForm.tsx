@@ -140,9 +140,10 @@ export default function UniverseForm() {
       <div>
         <label style={labelStyle}>
           Topics CSV — the fixed topic list for this universe. Column <span className="mono">topic</span>{" "}
-          required; <span className="mono">type</span>, <span className="mono">priority_tier</span>,{" "}
-          <span className="mono">volume</span> optional (extra columns are ignored). Set once — every future
-          run reuses this list, no re-upload needed.
+          required; <span className="mono">category</span> (the sub-vertical, e.g. Skincare, Lips, Hair Care —
+          what the theme breakdown groups by), <span className="mono">type</span>,{" "}
+          <span className="mono">priority_tier</span>, <span className="mono">volume</span> optional (extra
+          columns are ignored). Set once — every future run reuses this list, no re-upload needed.
         </label>
         <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={onFileChange} style={{ fontSize: 14 }} />
         {fileName && (

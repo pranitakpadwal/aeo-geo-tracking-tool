@@ -24,12 +24,12 @@ export function createUniverse(input: UniverseInput): string {
   ).run(id, input.name, input.brand, input.domain || null, JSON.stringify(input.competitors));
 
   const insertTopic = db.prepare(
-    `INSERT INTO universe_topics (universe_id, topic, type, priority_tier, volume)
-     VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO universe_topics (universe_id, topic, type, category, priority_tier, volume)
+     VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insertMany = db.transaction((topics: UniverseInput["topics"]) => {
     topics.forEach((t) => {
-      insertTopic.run(id, t.topic, t.type || null, t.priorityTier || null, t.volume ?? null);
+      insertTopic.run(id, t.topic, t.type || null, t.category || null, t.priorityTier || null, t.volume ?? null);
     });
   });
   insertMany(input.topics);
@@ -51,6 +51,7 @@ interface UniverseTopicRow {
   universe_id: string;
   topic: string;
   type: string | null;
+  category: string | null;
   priority_tier: string | null;
   volume: number | null;
 }
@@ -72,6 +73,7 @@ function rowToTopic(row: UniverseTopicRow): UniverseTopicRecord {
     universeId: row.universe_id,
     topic: row.topic,
     type: row.type || undefined,
+    category: row.category || undefined,
     priorityTier: row.priority_tier || undefined,
     volume: row.volume ?? undefined,
   };
@@ -127,6 +129,7 @@ export function startUniverseRun(universeId: string): string {
     topics: universe.topics.map((t) => ({
       topic: t.topic,
       type: t.type,
+      category: t.category,
       priorityTier: t.priorityTier,
       volume: t.volume,
     })),

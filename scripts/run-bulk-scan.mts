@@ -49,6 +49,7 @@ function parseTopicsFile(filePath: string): BulkScanInput["topics"] {
   const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
   const topicIdx = header.indexOf("topic");
   const typeIdx = header.indexOf("type");
+  const categoryIdx = header.indexOf("category"); // the real sub-vertical, e.g. Skincare/Lips/Hair Care
   const tierIdx = header.indexOf("priority_tier");
   const volumeIdx = header.indexOf("volume");
   if (topicIdx === -1) {
@@ -62,6 +63,7 @@ function parseTopicsFile(filePath: string): BulkScanInput["topics"] {
     return {
       topic: cols[topicIdx]?.trim(),
       type: typeIdx >= 0 ? cols[typeIdx]?.trim() || undefined : undefined,
+      category: categoryIdx >= 0 ? cols[categoryIdx]?.trim() || undefined : undefined,
       priorityTier: tierIdx >= 0 ? cols[tierIdx]?.trim() || undefined : undefined,
       volume: volumeIdx >= 0 && cols[volumeIdx] ? Number(cols[volumeIdx]) || undefined : undefined,
     };

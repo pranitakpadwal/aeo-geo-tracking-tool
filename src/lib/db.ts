@@ -75,6 +75,7 @@ db.exec(`
     idx INTEGER NOT NULL,
     topic TEXT NOT NULL,
     type TEXT,
+    category TEXT,
     priority_tier TEXT,
     volume INTEGER,
     question TEXT,
@@ -109,6 +110,7 @@ db.exec(`
     universe_id TEXT NOT NULL REFERENCES universes(id) ON DELETE CASCADE,
     topic TEXT NOT NULL,
     type TEXT,
+    category TEXT,
     priority_tier TEXT,
     volume INTEGER
   );
@@ -125,5 +127,16 @@ if (!bulkScanColumns.some((c) => c.name === "universe_id")) {
   db.exec(`ALTER TABLE bulk_scans ADD COLUMN universe_id TEXT REFERENCES universes(id)`);
 }
 db.exec(`CREATE INDEX IF NOT EXISTS idx_bulk_scans_universe ON bulk_scans(universe_id);`);
+
+// category: the real sub-category (e.g. "Skincare", "Lips", "Hair Care") a
+// topic rolls up into — distinct from `type`, which in imported SEMrush-style
+// exports is a content-strategy label ("Baseline", "New Product/Ingredient"),
+// not a sub-vertical. Added defensively for the same reason as universe_id.
+for (const table of ["bulk_scan_topics", "universe_topics"] as const) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === "category")) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN category TEXT`);
+  }
+}
 
 export default db;
