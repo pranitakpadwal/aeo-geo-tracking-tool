@@ -90,6 +90,40 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_bulk_scan_topics_scan ON bulk_scan_topics(bulk_scan_id);
+
+  -- Universes: a persistent brand+category tracker. A universe is set up
+  -- once (brand, domain, competitors, fixed topic list) and then re-run over
+  -- time, each run producing a bulk_scans row — so trends/movement compound
+  -- across runs instead of the user re-uploading a CSV every time.
+  CREATE TABLE IF NOT EXISTS universes (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    brand TEXT NOT NULL,
+    domain TEXT,
+    competitors TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS universe_topics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    universe_id TEXT NOT NULL REFERENCES universes(id) ON DELETE CASCADE,
+    topic TEXT NOT NULL,
+    type TEXT,
+    priority_tier TEXT,
+    volume INTEGER
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_universe_topics_universe ON universe_topics(universe_id);
 `);
+
+// bulk_scans.universe_id: nullable so existing one-off bulk scans (created
+// before universes existed, or still run standalone via /bulk-scan) keep
+// working unchanged. Added defensively since SQLite has no
+// "ADD COLUMN IF NOT EXISTS".
+const bulkScanColumns = db.prepare(`PRAGMA table_info(bulk_scans)`).all() as { name: string }[];
+if (!bulkScanColumns.some((c) => c.name === "universe_id")) {
+  db.exec(`ALTER TABLE bulk_scans ADD COLUMN universe_id TEXT REFERENCES universes(id)`);
+}
+db.exec(`CREATE INDEX IF NOT EXISTS idx_bulk_scans_universe ON bulk_scans(universe_id);`);
 
 export default db;

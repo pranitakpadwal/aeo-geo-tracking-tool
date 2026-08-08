@@ -80,6 +80,7 @@ export interface BulkScanRecord {
   completedTopics: number;
   createdAt: string;
   completedAt: string | null;
+  universeId: string | null; // set when this run belongs to a persistent Universe, null for one-off bulk scans
 }
 
 export interface CitationRef {
@@ -108,4 +109,51 @@ export interface BulkScanTopicResult {
 
 export interface BulkScanDetail extends BulkScanRecord {
   topics: BulkScanTopicResult[];
+}
+
+// --- Universes: a persistent brand+category tracker. Set up once (brand,
+// domain, competitors, fixed topic list), then re-run over time — each run
+// is a bulk_scans row (with universe_id set) so history/trend compounds. ---
+
+export interface UniverseTopicInput {
+  topic: string;
+  type?: string;
+  priorityTier?: string;
+  volume?: number;
+}
+
+export interface UniverseInput {
+  name: string;
+  brand: string;
+  domain?: string;
+  competitors: CompetitorInput[];
+  topics: UniverseTopicInput[];
+}
+
+export interface UniverseTopicRecord extends UniverseTopicInput {
+  id: number;
+  universeId: string;
+}
+
+export interface Universe {
+  id: string;
+  name: string;
+  brand: string;
+  domain: string | null;
+  competitors: CompetitorInput[];
+  createdAt: string;
+}
+
+export interface UniverseRunSummary {
+  id: string;
+  status: BulkScanRecord["status"];
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface UniverseDetail extends Universe {
+  topics: UniverseTopicRecord[];
+  topicCount: number;
+  runs: UniverseRunSummary[];
+  latestRunId: string | null;
 }

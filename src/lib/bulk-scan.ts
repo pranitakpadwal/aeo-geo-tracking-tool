@@ -13,12 +13,19 @@ import type {
 
 const QUESTION_BATCH_SIZE = 15;
 
-export function createBulkScan(input: BulkScanInput): string {
+export function createBulkScan(input: BulkScanInput, universeId?: string | null): string {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO bulk_scans (id, brand, domain, competitors, status, total_topics)
-     VALUES (?, ?, ?, ?, 'pending', ?)`
-  ).run(id, input.brand, input.domain || null, JSON.stringify(input.competitors), input.topics.length);
+    `INSERT INTO bulk_scans (id, brand, domain, competitors, status, total_topics, universe_id)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?)`
+  ).run(
+    id,
+    input.brand,
+    input.domain || null,
+    JSON.stringify(input.competitors),
+    input.topics.length,
+    universeId || null
+  );
 
   const insertTopic = db.prepare(
     `INSERT INTO bulk_scan_topics (bulk_scan_id, idx, topic, type, priority_tier, volume, status)
@@ -129,6 +136,7 @@ interface BulkScanRow {
   completed_topics: number;
   created_at: string;
   completed_at: string | null;
+  universe_id: string | null;
 }
 
 interface BulkScanTopicRow {
@@ -162,6 +170,7 @@ function rowToRecord(row: BulkScanRow): BulkScanRecord {
     completedTopics: row.completed_topics,
     createdAt: row.created_at,
     completedAt: row.completed_at,
+    universeId: row.universe_id,
   };
 }
 
@@ -201,6 +210,15 @@ export function listBulkScans(limit = 50): BulkScanRecord[] {
   const rows = db
     .prepare(`SELECT * FROM bulk_scans ORDER BY created_at DESC LIMIT ?`)
     .all(limit) as BulkScanRow[];
+  return rows.map(rowToRecord);
+}
+
+/** All runs (any status) belonging to a universe, oldest first — the run
+ * history / trend series shown on a universe's dashboard. */
+export function listBulkScansForUniverse(universeId: string): BulkScanRecord[] {
+  const rows = db
+    .prepare(`SELECT * FROM bulk_scans WHERE universe_id = ? ORDER BY created_at ASC`)
+    .all(universeId) as BulkScanRow[];
   return rows.map(rowToRecord);
 }
 

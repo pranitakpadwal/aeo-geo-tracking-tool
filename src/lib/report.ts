@@ -1,5 +1,5 @@
-import { getBulkScan, listBulkScansForBrand } from "./bulk-scan";
-import type { BulkScanDetail } from "./types";
+import { getBulkScan, listBulkScansForBrand, listBulkScansForUniverse } from "./bulk-scan";
+import type { BulkScanDetail, CitationRef } from "./types";
 
 /**
  * Aggregation layer for the AEO/GEO citation report, built entirely from
@@ -51,6 +51,126 @@ export interface BulkScanReport {
   site: SiteReport;
   topics: TopicReportRow[];
   movement: Movement | null;
+}
+
+// --- Universe roll-ups: same source data as the topic report, grouped up a
+// level to "here's the category, here's the themes moving up/down" instead
+// of a flat topic list. Pure functions over an already-fetched scan — no
+// extra LLM calls. ---
+
+export interface ThemeBreakdownRow {
+  theme: string; // the `type` column the user supplied in their CSV import (not a keyword-inferred category)
+  topicsCount: number;
+  leader: string | null;
+  perBrand: Record<string, { mentions: number; citations: number }>;
+}
+
+export interface CitedPageEntry {
+  url: string;
+  title: string | null;
+  brand: string; // which brand/competitor this citation belongs to
+  topicsCiting: number; // how many topics in this run cited this URL for this brand
+  status: "new" | "continuing" | "lost" | null; // null when there's no previous run to diff against
+}
+
+/** Groups topics by the user-supplied `type` field and rolls mentions/
+ * citations/leader up to that theme, same shape as the per-topic report. */
+export function buildThemeBreakdown(scan: BulkScanDetail): ThemeBreakdownRow[] {
+  const names = [scan.brand, ...scan.competitors.map((c) => c.name)];
+
+  const groups = new Map<string, BulkScanDetail["topics"]>();
+  for (const t of scan.topics) {
+    const theme = t.type?.trim() || "Uncategorized";
+    if (!groups.has(theme)) groups.set(theme, []);
+    groups.get(theme)!.push(t);
+  }
+
+  const rows: ThemeBreakdownRow[] = [];
+  for (const [theme, topics] of groups) {
+    const perBrand: Record<string, { mentions: number; citations: number }> = {};
+    for (const name of names) {
+      let mentions = 0;
+      let citations = 0;
+      for (const t of topics) {
+        if (name === scan.brand) {
+          if (t.brandMentioned) mentions++;
+          if (t.brandCitations.length > 0) citations++;
+        } else {
+          if (t.competitorsMentioned[name]) mentions++;
+          if ((t.competitorCitations[name] || []).length > 0) citations++;
+        }
+      }
+      perBrand[name] = { mentions, citations };
+    }
+
+    let leader: string | null = null;
+    let best = -1;
+    for (const name of names) {
+      if (perBrand[name].citations > best) {
+        best = perBrand[name].citations;
+        leader = name;
+      }
+    }
+    if (best <= 0) leader = null;
+
+    rows.push({ theme, topicsCount: topics.length, leader, perBrand });
+  }
+
+  return rows.sort((a, b) => b.topicsCount - a.topicsCount);
+}
+
+/** Per-brand map of cited URL -> { title, how many topics cited it }. */
+function collectCitedUrls(scan: BulkScanDetail): Map<string, Map<string, { title: string | null; count: number }>> {
+  const names = [scan.brand, ...scan.competitors.map((c) => c.name)];
+  const byBrand = new Map<string, Map<string, { title: string | null; count: number }>>();
+  for (const name of names) byBrand.set(name, new Map());
+
+  for (const t of scan.topics) {
+    for (const name of names) {
+      const urls: CitationRef[] = name === scan.brand ? t.brandCitations : t.competitorCitations[name] || [];
+      const map = byBrand.get(name)!;
+      for (const c of urls) {
+        const existing = map.get(c.url);
+        if (existing) existing.count++;
+        else map.set(c.url, { title: c.title, count: 1 });
+      }
+    }
+  }
+  return byBrand;
+}
+
+/**
+ * Leaderboard of every distinct cited URL per brand, ranked by how many
+ * topics cited it in this run. When a previous run (same universe) is
+ * supplied, each URL is also tagged new/continuing/lost since that run.
+ */
+export function buildCitedPagesSummary(scan: BulkScanDetail, previousScan?: BulkScanDetail | null): CitedPageEntry[] {
+  const names = [scan.brand, ...scan.competitors.map((c) => c.name)];
+  const current = collectCitedUrls(scan);
+  const previous = previousScan ? collectCitedUrls(previousScan) : null;
+
+  const rows: CitedPageEntry[] = [];
+  for (const name of names) {
+    const curMap = current.get(name) || new Map();
+    const prevMap = previous?.get(name);
+
+    for (const [url, { title, count }] of curMap) {
+      const status: CitedPageEntry["status"] = previous ? (prevMap?.has(url) ? "continuing" : "new") : null;
+      rows.push({ url, title, brand: name, topicsCiting: count, status });
+    }
+
+    if (prevMap) {
+      for (const [url, { title }] of prevMap) {
+        if (!curMap.has(url)) {
+          rows.push({ url, title, brand: name, topicsCiting: 0, status: "lost" });
+        }
+      }
+    }
+  }
+
+  const brandOrder = new Map(names.map((n, i) => [n, i]));
+  rows.sort((a, b) => (brandOrder.get(a.brand)! - brandOrder.get(b.brand)!) || b.topicsCiting - a.topicsCiting);
+  return rows;
 }
 
 function computeSiteReport(scan: BulkScanDetail): SiteReport {
@@ -168,4 +288,34 @@ export function buildReportForScan(scanId: string): BulkScanReport | null {
   const movement = previousScan ? computeMovement(site, computeSiteReport(previousScan)) : null;
 
   return { site, topics, movement };
+}
+
+export interface UniverseRunReport extends BulkScanReport {
+  themes: ThemeBreakdownRow[];
+  citedPages: CitedPageEntry[];
+}
+
+/**
+ * Same report as buildReportForScan, plus the theme roll-up and cited-pages
+ * leaderboard, diffed against the run immediately before this one *in this
+ * universe's run history* (scoped by universe_id, not brand+domain string
+ * match — a universe's identity is the row, not the strings on it).
+ */
+export function buildReportForUniverseRun(universeId: string, runId: string): UniverseRunReport | null {
+  const scan = getBulkScan(runId);
+  if (!scan || scan.status !== "complete") return null;
+
+  const site = computeSiteReport(scan);
+  const topics = computeTopicReport(scan);
+
+  const history = listBulkScansForUniverse(universeId).filter((r) => r.status === "complete");
+  const idx = history.findIndex((h) => h.id === scan.id);
+  const previousRecord = idx > 0 ? history[idx - 1] : null;
+  const previousScan = previousRecord ? getBulkScan(previousRecord.id) : null;
+  const movement = previousScan ? computeMovement(site, computeSiteReport(previousScan)) : null;
+
+  const themes = buildThemeBreakdown(scan);
+  const citedPages = buildCitedPagesSummary(scan, previousScan);
+
+  return { site, topics, movement, themes, citedPages };
 }
