@@ -64,7 +64,8 @@ export async function POST(req: NextRequest) {
         .slice(0, 10)
     : [];
 
-  const input: BulkScanInput = { brand, domain, competitors, topics };
+  const promptMode = body.promptMode === "keyword" ? "keyword" : "question";
+  const input: BulkScanInput = { brand, domain, competitors, topics, promptMode };
   const id = createBulkScan(input);
 
   // Fire-and-forget: this process is expected to be a persistent Node server

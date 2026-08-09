@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bar, BarChart, Delta, PieChart, brandColor, statusFor, statusStyle } from "./Charts";
-import type { BulkScanDetail, UniverseDetail } from "@/lib/types";
+import type { BulkScanDetail, PromptMode, UniverseDetail } from "@/lib/types";
 import type { UniverseRunReport } from "@/lib/report";
 
 const pageBadge: Record<string, { bg: string; text: string; label: string }> = {
@@ -37,6 +37,7 @@ export default function UniverseView({ id }: { id: string }) {
   const [run, setRun] = useState<BulkScanDetail | null>(null);
   const [report, setReport] = useState<UniverseRunReport | null>(null);
   const [starting, setStarting] = useState(false);
+  const [promptMode, setPromptMode] = useState<PromptMode>("question");
 
   const loadUniverse = useCallback(async () => {
     const res = await fetch(`/api/universe/${id}`, { cache: "no-store" });
@@ -90,7 +91,11 @@ export default function UniverseView({ id }: { id: string }) {
     setReport(null);
     setRun(null);
     try {
-      const res = await fetch(`/api/universe/${id}/run`, { method: "POST" });
+      const res = await fetch(`/api/universe/${id}/run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ promptMode }),
+      });
       const data = await res.json();
       if (res.ok) setRunId(data.runId);
     } finally {
@@ -136,6 +141,31 @@ export default function UniverseView({ id }: { id: string }) {
         </p>
         <p style={{ fontSize: 11.5, color: "var(--text-faint)", margin: "0 0 20px" }}>
           Created {new Date(universe.createdAt).toLocaleDateString()}
+        </p>
+
+        <div style={{ display: "flex", gap: 14, marginBottom: 10, fontSize: 12.5 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="promptMode"
+              checked={promptMode === "question"}
+              onChange={() => setPromptMode("question")}
+            />
+            Rewrite into shopper questions (recommended)
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="promptMode"
+              checked={promptMode === "keyword"}
+              onChange={() => setPromptMode("keyword")}
+            />
+            Use keywords as-is
+          </label>
+        </div>
+        <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 14px" }}>
+          Applies to the next run — compare this run&rsquo;s visibility/mentions/citations/cited pages against a
+          previous run made with the other mode.
         </p>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
@@ -198,21 +228,29 @@ export default function UniverseView({ id }: { id: string }) {
                 .slice()
                 .reverse()
                 .map((r) => (
-                  <div key={r.id} style={{ display: "grid", gridTemplateColumns: "140px 1fr 90px", gap: 10, alignItems: "center", fontSize: 12 }}>
+                  <div key={r.id} style={{ display: "grid", gridTemplateColumns: "140px 1fr 90px 130px", gap: 10, alignItems: "center", fontSize: 12 }}>
                     <span className="mono" style={{ color: "var(--text-muted)" }}>
                       {new Date(r.createdAt).toLocaleDateString()}
                     </span>
                     <Bar pct={r.status === "complete" ? 100 : r.status === "error" ? 0 : 50} color={r.id === runId ? "var(--accent)" : "var(--series-3)"} />
                     <span style={{ color: r.status === "error" ? "var(--danger)" : "var(--text-muted)" }}>{r.status}</span>
+                    <span style={{ color: "var(--text-faint)" }}>
+                      {r.promptMode === "keyword" ? "keyword prompts" : "question prompts"}
+                    </span>
                   </div>
                 ))}
             </div>
           </>
         )}
 
-        {report && (
+        {report && run && (
           <>
-            <h1 style={{ ...sectionHeading, marginTop: 34 }}>0. Market Share Snapshot</h1>
+            <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 4px" }}>
+              This run used{" "}
+              <strong>{run.promptMode === "keyword" ? "keywords as-is" : "rewritten shopper questions"}</strong>{" "}
+              as the prompt sent to Claude.
+            </p>
+            <h1 style={{ ...sectionHeading, marginTop: 10 }}>0. Market Share Snapshot</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
               Mentions is a share question — shown as a pie. Citations (real cited URLs) is a magnitude/business-
               value question, not a share of a fixed pie — shown as raw scale.

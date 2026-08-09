@@ -9,6 +9,7 @@ import type {
   BulkScanTopicResult,
   CitationRef,
   CompetitorInput,
+  PromptMode,
 } from "./types";
 
 const QUESTION_BATCH_SIZE = 15;
@@ -16,15 +17,16 @@ const QUESTION_BATCH_SIZE = 15;
 export function createBulkScan(input: BulkScanInput, universeId?: string | null): string {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO bulk_scans (id, brand, domain, competitors, status, total_topics, universe_id)
-     VALUES (?, ?, ?, ?, 'pending', ?, ?)`
+    `INSERT INTO bulk_scans (id, brand, domain, competitors, status, total_topics, universe_id, prompt_mode)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`
   ).run(
     id,
     input.brand,
     input.domain || null,
     JSON.stringify(input.competitors),
     input.topics.length,
-    universeId || null
+    universeId || null,
+    input.promptMode || "question"
   );
 
   const insertTopic = db.prepare(
@@ -99,15 +101,27 @@ export async function runBulkScan(bulkScanId: string, input: BulkScanInput): Pro
       .prepare(`SELECT id, topic, question FROM bulk_scan_topics WHERE bulk_scan_id = ? ORDER BY idx ASC`)
       .all(bulkScanId) as TopicRow[];
 
+    const promptMode: PromptMode = input.promptMode || "question";
     const updateQuestion = db.prepare(`UPDATE bulk_scan_topics SET question = ? WHERE id = ?`);
-    for (let i = 0; i < rows.length; i += QUESTION_BATCH_SIZE) {
-      const batch = rows.slice(i, i + QUESTION_BATCH_SIZE);
-      const questions = await generateTopicQuestions(batch.map((r) => r.topic));
-      batch.forEach((r, j) => {
-        const q = questions[j] || r.topic;
-        r.question = q;
-        updateQuestion.run(q, r.id);
+    if (promptMode === "keyword") {
+      // Send the raw topic/keyword straight to Claude as the prompt — no
+      // rewrite into a natural question. `question` is still filled in
+      // (with the topic itself) so the UI always has something to show as
+      // "what was actually asked", same as question mode.
+      rows.forEach((r) => {
+        r.question = r.topic;
+        updateQuestion.run(r.topic, r.id);
       });
+    } else {
+      for (let i = 0; i < rows.length; i += QUESTION_BATCH_SIZE) {
+        const batch = rows.slice(i, i + QUESTION_BATCH_SIZE);
+        const questions = await generateTopicQuestions(batch.map((r) => r.topic));
+        batch.forEach((r, j) => {
+          const q = questions[j] || r.topic;
+          r.question = q;
+          updateQuestion.run(q, r.id);
+        });
+      }
     }
 
     const updateResult = db.prepare(`
@@ -169,6 +183,7 @@ interface BulkScanRow {
   created_at: string;
   completed_at: string | null;
   universe_id: string | null;
+  prompt_mode: PromptMode;
 }
 
 interface BulkScanTopicRow {
@@ -204,6 +219,7 @@ function rowToRecord(row: BulkScanRow): BulkScanRecord {
     createdAt: row.created_at,
     completedAt: row.completed_at,
     universeId: row.universe_id,
+    promptMode: row.prompt_mode || "question",
   };
 }
 

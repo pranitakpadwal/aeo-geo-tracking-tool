@@ -13,6 +13,8 @@
  *
  * --competitors accepts "Name:domain" pairs (domain optional), comma-separated.
  * --topics points at a CSV with a `topic` column (type/priority_tier/volume optional).
+ * --prompt-mode: "question" (default, rewrites each topic into a shopper question) or
+ *   "keyword" (sends the raw topic/keyword string to Claude as-is, unmodified).
  */
 import fs from "fs";
 import path from "path";
@@ -85,13 +87,15 @@ async function main() {
   const topicsPath = path.resolve(args.topics);
   const topics = parseTopicsFile(topicsPath);
   const competitors = parseCompetitors(args.competitors);
+  const promptMode = args["prompt-mode"] === "keyword" ? "keyword" : "question";
 
   console.log(`Brand: ${args.brand} (${args.domain})`);
   console.log(`Competitors: ${competitors.map((c) => c.name).join(", ") || "(none)"}`);
   console.log(`Topics: ${topics.length} from ${topicsPath}`);
+  console.log(`Prompt mode: ${promptMode}${promptMode === "question" ? " (default — pass --prompt-mode keyword to use raw keywords instead)" : ""}`);
   console.log("");
 
-  const input: BulkScanInput = { brand: args.brand, domain: args.domain, competitors, topics };
+  const input: BulkScanInput = { brand: args.brand, domain: args.domain, competitors, topics, promptMode };
   const id = createBulkScan(input);
   console.log(`Created bulk scan ${id} — running sequentially (this will take a while for a large list)...`);
 

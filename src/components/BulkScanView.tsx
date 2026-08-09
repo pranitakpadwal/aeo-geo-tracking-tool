@@ -104,11 +104,16 @@ export default function BulkScanView({ id }: { id: string }) {
 
         {report && (
           <>
+            <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 4px" }}>
+              This run used{" "}
+              <strong>{scan.promptMode === "keyword" ? "keywords as-is" : "rewritten shopper questions"}</strong>{" "}
+              as the prompt sent to Claude.
+            </p>
             <h1
               style={{
                 fontSize: 16,
                 fontWeight: 700,
-                margin: "34px 0 4px",
+                margin: "10px 0 4px",
                 paddingBottom: 8,
                 borderBottom: "3px solid var(--accent)",
               }}

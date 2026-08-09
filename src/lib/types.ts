@@ -63,11 +63,20 @@ export interface BulkScanTopicInput {
   volume?: number;
 }
 
+// "question" (default): rewrite each keyword into a natural shopper
+// question before asking Claude — e.g. "shampoo" -> "what's the best
+// shampoo for dry hair". "keyword": skip the rewrite and send the raw
+// keyword/topic string to Claude as the prompt, verbatim, so you can see
+// how visibility/mentions/citations/cited-pages differ from the rewritten
+// version for the exact same topic list.
+export type PromptMode = "question" | "keyword";
+
 export interface BulkScanInput {
   brand: string;
   domain?: string;
   competitors: CompetitorInput[];
   topics: BulkScanTopicInput[];
+  promptMode?: PromptMode;
 }
 
 export interface BulkScanRecord {
@@ -82,6 +91,7 @@ export interface BulkScanRecord {
   createdAt: string;
   completedAt: string | null;
   universeId: string | null; // set when this run belongs to a persistent Universe, null for one-off bulk scans
+  promptMode: PromptMode;
 }
 
 export interface CitationRef {
@@ -152,6 +162,7 @@ export interface UniverseRunSummary {
   status: BulkScanRecord["status"];
   createdAt: string;
   completedAt: string | null;
+  promptMode: PromptMode;
 }
 
 export interface UniverseDetail extends Universe {

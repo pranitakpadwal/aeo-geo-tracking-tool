@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { parseTopicsCsv, type CsvTopicRow } from "@/lib/csv";
+import type { PromptMode } from "@/lib/types";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -41,6 +42,7 @@ export default function BulkScanForm() {
   const [domain, setDomain] = useState("");
   const [competitorsText, setCompetitorsText] = useState("");
   const [topics, setTopics] = useState<CsvTopicRow[]>([]);
+  const [promptMode, setPromptMode] = useState<PromptMode>("question");
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,7 @@ export default function BulkScanForm() {
           domain,
           competitors: parseCompetitors(competitorsText),
           topics,
+          promptMode,
         }),
       });
       const data = await res.json();
@@ -152,6 +155,40 @@ export default function BulkScanForm() {
             )}
           </div>
         )}
+      </div>
+      <div>
+        <label style={labelStyle}>Prompt — what gets sent to Claude for each topic</label>
+        <div style={{ display: "grid", gap: 8 }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13.5, cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="promptMode"
+              checked={promptMode === "question"}
+              onChange={() => setPromptMode("question")}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong>Rewrite into a shopper question (recommended)</strong> — e.g. topic{" "}
+              <span className="mono">shampoo</span> becomes &ldquo;what&rsquo;s the best shampoo for dry
+              hair&rdquo; before asking Claude. Matches how real AI-answer-engine users actually phrase things.
+            </span>
+          </label>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13.5, cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="promptMode"
+              checked={promptMode === "keyword"}
+              onChange={() => setPromptMode("keyword")}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong>Use the keyword as-is</strong> — sends the bare topic/keyword string straight to Claude,
+              unmodified (e.g. just <span className="mono">shampoo</span>). Useful for comparing how
+              visibility/mentions/citations/cited pages differ from the rewritten version, for the same topic
+              list.
+            </span>
+          </label>
+        </div>
       </div>
       <button
         type="submit"

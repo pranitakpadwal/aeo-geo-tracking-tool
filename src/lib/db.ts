@@ -139,4 +139,14 @@ for (const table of ["bulk_scan_topics", "universe_topics"] as const) {
   }
 }
 
+// prompt_mode: "question" (default) rewrites each keyword into a natural
+// shopper question before asking Claude (e.g. "shampoo" -> "what's the best
+// shampoo for dry hair"). "keyword" skips that rewrite and sends the raw
+// keyword/topic string to Claude as-is, so you can see how visibility/
+// mentions/citations/cited-pages compare when the prompt is the bare
+// keyword vs. a realistic question built from it.
+if (!bulkScanColumns.some((c) => c.name === "prompt_mode")) {
+  db.exec(`ALTER TABLE bulk_scans ADD COLUMN prompt_mode TEXT NOT NULL DEFAULT 'question'`);
+}
+
 export default db;

@@ -4,6 +4,7 @@ import { createBulkScan, listBulkScansForUniverse, runBulkScan } from "./bulk-sc
 import type {
   BulkScanInput,
   CompetitorInput,
+  PromptMode,
   Universe,
   UniverseDetail,
   UniverseInput,
@@ -94,6 +95,7 @@ export function getUniverse(id: string): UniverseDetail | null {
     status: r.status,
     createdAt: r.createdAt,
     completedAt: r.completedAt,
+    promptMode: r.promptMode,
   }));
   const latestRunId = runs.length > 0 ? runs[runs.length - 1].id : null;
 
@@ -116,7 +118,7 @@ export function listRunsForUniverse(universeId: string) {
  * re-upload needed), stamps universe_id on the new bulk_scans row, and fires
  * the run — same fire-and-forget pattern used by POST /api/bulk-scan.
  */
-export function startUniverseRun(universeId: string): string {
+export function startUniverseRun(universeId: string, promptMode?: PromptMode): string {
   const universe = getUniverse(universeId);
   if (!universe) {
     throw new Error(`Universe ${universeId} not found.`);
@@ -133,6 +135,7 @@ export function startUniverseRun(universeId: string): string {
       priorityTier: t.priorityTier,
       volume: t.volume,
     })),
+    promptMode,
   };
 
   const runId = createBulkScan(input, universeId);
