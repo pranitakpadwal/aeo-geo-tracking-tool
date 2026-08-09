@@ -17,12 +17,12 @@ import type {
  * kicked off against it repeatedly without ever re-uploading a CSV, so
  * mentions/citations/themes can be watched moving up/down over time.
  */
-export function createUniverse(input: UniverseInput): string {
+export function createUniverse(input: UniverseInput, userId?: string | null): string {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO universes (id, name, brand, domain, competitors)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(id, input.name, input.brand, input.domain || null, JSON.stringify(input.competitors));
+    `INSERT INTO universes (id, name, brand, domain, competitors, user_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(id, input.name, input.brand, input.domain || null, JSON.stringify(input.competitors), userId || null);
 
   const insertTopic = db.prepare(
     `INSERT INTO universe_topics (universe_id, topic, type, category, priority_tier, volume)
@@ -45,6 +45,7 @@ interface UniverseRow {
   domain: string | null;
   competitors: string;
   created_at: string;
+  user_id: string | null;
 }
 
 interface UniverseTopicRow {
@@ -102,9 +103,24 @@ export function getUniverse(id: string): UniverseDetail | null {
   return { ...rowToUniverse(row), topics, topicCount: topics.length, runs, latestRunId };
 }
 
-export function listUniverses(): Universe[] {
-  const rows = db.prepare(`SELECT * FROM universes ORDER BY created_at DESC`).all() as UniverseRow[];
+/** A user's own universes, newest first — the "My Universes" list. */
+export function listUniverses(userId: string): Universe[] {
+  const rows = db
+    .prepare(`SELECT * FROM universes WHERE user_id = ? ORDER BY created_at DESC`)
+    .all(userId) as UniverseRow[];
   return rows.map(rowToUniverse);
+}
+
+/**
+ * Existence + ownership of a universe, without paying for a full
+ * getUniverse() (topics + run history) fetch. `userId: null` distinguishes
+ * "exists but predates accounts" (grandfathered, anyone can view) from
+ * "doesn't exist" (`exists: false`) — the page guard treats those
+ * differently.
+ */
+export function getUniverseOwner(id: string): { exists: boolean; userId: string | null } {
+  const row = db.prepare(`SELECT user_id FROM universes WHERE id = ?`).get(id) as { user_id: string | null } | undefined;
+  return row ? { exists: true, userId: row.user_id } : { exists: false, userId: null };
 }
 
 /** All runs for a universe, oldest first — the series a run-history/trend
@@ -118,7 +134,7 @@ export function listRunsForUniverse(universeId: string) {
  * re-upload needed), stamps universe_id on the new bulk_scans row, and fires
  * the run — same fire-and-forget pattern used by POST /api/bulk-scan.
  */
-export function startUniverseRun(universeId: string, promptMode?: PromptMode): string {
+export function startUniverseRun(universeId: string, promptMode?: PromptMode, userId?: string | null): string {
   const universe = getUniverse(universeId);
   if (!universe) {
     throw new Error(`Universe ${universeId} not found.`);
@@ -138,7 +154,7 @@ export function startUniverseRun(universeId: string, promptMode?: PromptMode): s
     promptMode,
   };
 
-  const runId = createBulkScan(input, universeId);
+  const runId = createBulkScan(input, universeId, userId);
 
   runBulkScan(runId, input).catch((err) => {
     console.error(`Universe run ${runId} (universe ${universeId}) failed:`, err);

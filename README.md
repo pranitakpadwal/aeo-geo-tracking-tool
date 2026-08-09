@@ -49,7 +49,36 @@ guess.
   citations vs. every competitor, topic-level breakdown with a "leader" per
   topic, and week-over-week movement once you've run it more than once for
   the same brand
+- `/universe` — your saved Universes (persistent brand+topic-list trackers);
+  `/universe/new` to create one, `/universe/[id]` for its dashboard
 - `/history` — all past quick scans
+- `/login`, `/register` — accounts. Universes and bulk scans are tied to
+  whoever created them (see "Accounts" below); log back in and they're
+  still there.
+
+## Accounts
+
+Registering (`/register`) creates a row in `users` and a session cookie
+(`citable_session`, 30-day expiry, `httpOnly`). Session tokens live in a
+`sessions` table — see `src/lib/auth.ts` (password hashing is Node's
+built-in `scrypt`, no extra dependency) and `src/lib/session.ts`
+(`getCurrentUser()`, the server-side cookie → user lookup).
+
+Every Universe and bulk scan is stamped with the creating user's id.
+Creating one requires being logged in; viewing/running one requires being
+its owner — enforced both at the API layer (`getUniverseOwner` /
+`getBulkScanOwner` in `src/lib/universe.ts` / `src/lib/bulk-scan.ts`) and at
+the page layer (redirect to `/login`, or a 404 if it's someone else's).
+Data created before accounts existed has `user_id = NULL` and is
+grandfathered as viewable by anyone with the link — it isn't retroactively
+locked out, but it also won't show up in anyone's `/universe` list.
+
+The `secure` cookie flag is on automatically once `NODE_ENV=production`
+(which `next start` sets on its own) — a plain-HTTP deployment won't be
+able to log in. Railway (and most real hosts) terminate HTTPS in front of
+your app, so this is normally a non-issue; it only bites you testing
+`npm start` locally over `http://`, where the browser will silently refuse
+to send the cookie back.
 
 ## Two scan modes — and why they're different
 
@@ -168,7 +197,8 @@ Optional env vars:
    Nixpacks — `npm install` → `npm run build` → `npm run start`).
 2. Add an **Environment Variable**: `ANTHROPIC_API_KEY`.
 3. Add a **Volume**, mount it at e.g. `/data`, and set `DATABASE_PATH` to
-   `/data/tracker.db` — otherwise scan history resets on every deploy.
+   `/data/tracker.db` — otherwise scan history *and accounts* reset on
+   every deploy (it's one SQLite file for everything, users included).
 4. (Optional) set `AEO_MODEL` if you want a cheaper default.
 
 ## Extending

@@ -58,9 +58,11 @@ export interface CsvTopicRow {
 }
 
 /** Header-flexible: matches by column name (case-insensitive), tolerates
- * extra columns (e.g. "rank", "top_matching_keyword") by ignoring them. */
-export function parseTopicsCsv(text: string): CsvTopicRow[] {
-  const rows = parseCsv(text);
+ * extra columns (e.g. "rank", "top_matching_keyword") by ignoring them.
+ * Shared by the CSV path (parseCsv -> rows) and the XLSX path
+ * (SheetJS sheet_to_json({ header: 1 }) -> rows) — both just need to
+ * produce string[][] first. */
+export function parseTopicRows(rows: string[][]): CsvTopicRow[] {
   if (rows.length === 0) return [];
 
   const header = rows[0].map((h) => h.trim().toLowerCase().replace(/[\s_]+/g, "_"));
@@ -87,4 +89,8 @@ export function parseTopicsCsv(text: string): CsvTopicRow[] {
       priorityTier: tierIdx >= 0 ? r[tierIdx]?.trim() || undefined : undefined,
       volume: volumeIdx >= 0 && r[volumeIdx] ? Number(r[volumeIdx].replace(/,/g, "")) || undefined : undefined,
     }));
+}
+
+export function parseTopicsCsv(text: string): CsvTopicRow[] {
+  return parseTopicRows(parseCsv(text));
 }

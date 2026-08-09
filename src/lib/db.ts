@@ -116,6 +116,26 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_universe_topics_universe ON universe_topics(universe_id);
+
+  -- Accounts: so a universe/bulk-scan's topics, runs and history are tied to
+  -- whoever created them and come back when they log back in, instead of
+  -- being anonymous/shared. Password hashing is Node's built-in scrypt (see
+  -- lib/auth.ts) — no extra native dependency alongside better-sqlite3.
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `);
 
 // bulk_scans.universe_id: nullable so existing one-off bulk scans (created
@@ -148,5 +168,18 @@ for (const table of ["bulk_scan_topics", "universe_topics"] as const) {
 if (!bulkScanColumns.some((c) => c.name === "prompt_mode")) {
   db.exec(`ALTER TABLE bulk_scans ADD COLUMN prompt_mode TEXT NOT NULL DEFAULT 'question'`);
 }
+
+// user_id: nullable so pre-auth data (created before login existed) doesn't
+// break — it just shows up owned by nobody rather than 500ing. New
+// universes/bulk-scans always get one from the session going forward.
+if (!db.prepare(`PRAGMA table_info(universes)`).all().some((c) => (c as { name: string }).name === "user_id")) {
+  db.exec(`ALTER TABLE universes ADD COLUMN user_id TEXT REFERENCES users(id)`);
+}
+db.exec(`CREATE INDEX IF NOT EXISTS idx_universes_user ON universes(user_id);`);
+
+if (!bulkScanColumns.some((c) => c.name === "user_id")) {
+  db.exec(`ALTER TABLE bulk_scans ADD COLUMN user_id TEXT REFERENCES users(id)`);
+}
+db.exec(`CREATE INDEX IF NOT EXISTS idx_bulk_scans_user ON bulk_scans(user_id);`);
 
 export default db;

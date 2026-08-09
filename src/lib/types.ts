@@ -92,6 +92,7 @@ export interface BulkScanRecord {
   completedAt: string | null;
   universeId: string | null; // set when this run belongs to a persistent Universe, null for one-off bulk scans
   promptMode: PromptMode;
+  userId: string | null; // who created this run; null for pre-auth/legacy data
 }
 
 export interface CitationRef {

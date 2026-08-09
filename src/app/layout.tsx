@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
+import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
     "Track whether AI answer engines (ChatGPT, Perplexity, Google AI Overviews) cite your brand — and what's working for the competitors who get cited instead.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+
   return (
     <html lang="en">
       <body>
@@ -35,12 +39,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               CITABLE
             </Link>
-            <nav style={{ display: "flex", gap: 22, fontSize: 13.5 }}>
+            <nav style={{ display: "flex", alignItems: "center", gap: 22, fontSize: 13.5 }}>
               <Link href="/" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 New scan
               </Link>
-              <Link href="/universe/new" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>
-                Universe
+              <Link href="/universe" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 700 }}>
+                My Universes
               </Link>
               <Link href="/bulk-scan" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 Bulk scan
@@ -48,6 +52,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/history" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
                 History
               </Link>
+              <span style={{ width: 1, height: 16, background: "var(--border)" }} />
+              {user ? (
+                <>
+                  <span style={{ color: "var(--text-muted)" }}>{user.email}</span>
+                  <LogoutButton />
+                </>
+              ) : (
+                <>
+                  <Link href="/login" style={{ color: "var(--text-muted)", textDecoration: "none" }}>
+                    Log in
+                  </Link>
+                  <Link
+                    href="/register"
+                    style={{
+                      background: "var(--accent)",
+                      color: "#fff",
+                      textDecoration: "none",
+                      borderRadius: 6,
+                      padding: "6px 12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
             </nav>
           </header>
           <main style={{ flex: 1, background: "var(--bg)" }}>{children}</main>

@@ -1,7 +1,12 @@
+import { redirect } from "next/navigation";
 import BulkScanForm from "@/components/BulkScanForm";
 import { isConfigured } from "@/lib/anthropic";
+import { getCurrentUser } from "@/lib/session";
 
-export default function BulkScanPage() {
+export default async function BulkScanPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
   const configured = isConfigured();
 
   return (

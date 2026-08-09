@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/anthropic";
+import { getCurrentUser } from "@/lib/session";
 import { createUniverse, startUniverseRun } from "@/lib/universe";
 import type { UniverseInput } from "@/lib/types";
 
 const MAX_TOPICS = 500;
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Log in to create a universe." }, { status: 401 });
+  }
+
   if (!isConfigured()) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY is not configured on this server." },
@@ -69,12 +75,12 @@ export async function POST(req: NextRequest) {
     : [];
 
   const input: UniverseInput = { name, brand, domain, competitors, topics };
-  const id = createUniverse(input);
+  const id = createUniverse(input, user.id);
 
   // Fire-and-forget, same pattern as POST /api/bulk-scan: this process is a
   // persistent Node server, so the run keeps going after we respond. A
   // client polls GET /api/universe/[id]/run/[runId]/report for progress.
-  const runId = startUniverseRun(id);
+  const runId = startUniverseRun(id, undefined, user.id);
 
   return NextResponse.json({ id, runId });
 }

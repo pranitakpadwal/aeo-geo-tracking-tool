@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { parseTopicsCsv, type CsvTopicRow } from "@/lib/csv";
+import { readTopicsFile } from "@/lib/read-topics-file";
+import type { CsvTopicRow } from "@/lib/csv";
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -45,14 +46,19 @@ export default function UniverseForm() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
-    const text = await file.text();
-    const parsed = parseTopicsCsv(text);
-    setTopics(parsed);
+    setFileError(null);
+    try {
+      setTopics(await readTopicsFile(file));
+    } catch (err) {
+      setTopics([]);
+      setFileError(err instanceof Error ? err.message : "Couldn't read that file.");
+    }
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -139,16 +145,26 @@ export default function UniverseForm() {
       </div>
       <div>
         <label style={labelStyle}>
-          Topics CSV — the fixed topic list for this universe. Column <span className="mono">topic</span>{" "}
-          required; <span className="mono">category</span> (the sub-vertical, e.g. Skincare, Lips, Hair Care —
-          what the theme breakdown groups by), <span className="mono">type</span>,{" "}
+          Topics — the fixed topic list for this universe, as a <span className="mono">.csv</span> or{" "}
+          <span className="mono">.xlsx</span> file. Column <span className="mono">topic</span> required;{" "}
+          <span className="mono">category</span> (the sub-vertical, e.g. Skincare, Lips, Hair Care — what the
+          theme breakdown groups by), <span className="mono">type</span>,{" "}
           <span className="mono">priority_tier</span>, <span className="mono">volume</span> optional (extra
           columns are ignored). No <span className="mono">category</span> column? Just upload your raw topic
           list — Claude auto-groups them into themes on the first run, no hand-labeling needed. Set once — every
           future run reuses this list, no re-upload needed.
         </label>
-        <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={onFileChange} style={{ fontSize: 14 }} />
-        {fileName && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={onFileChange}
+          style={{ fontSize: 14 }}
+        />
+        {fileError && (
+          <div style={{ fontSize: 13, color: "var(--danger)", marginTop: 6 }}>{fileError}</div>
+        )}
+        {fileName && !fileError && (
           <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
             {fileName} — {topics.length} topic{topics.length === 1 ? "" : "s"} parsed
             {topics.length > 0 && (

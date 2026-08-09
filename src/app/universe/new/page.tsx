@@ -1,7 +1,12 @@
+import { redirect } from "next/navigation";
 import UniverseForm from "@/components/UniverseForm";
 import { isConfigured } from "@/lib/anthropic";
+import { getCurrentUser } from "@/lib/session";
 
-export default function NewUniversePage() {
+export default async function NewUniversePage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
   const configured = isConfigured();
 
   return (

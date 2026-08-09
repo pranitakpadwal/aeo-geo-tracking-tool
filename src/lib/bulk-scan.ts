@@ -14,11 +14,11 @@ import type {
 
 const QUESTION_BATCH_SIZE = 15;
 
-export function createBulkScan(input: BulkScanInput, universeId?: string | null): string {
+export function createBulkScan(input: BulkScanInput, universeId?: string | null, userId?: string | null): string {
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO bulk_scans (id, brand, domain, competitors, status, total_topics, universe_id, prompt_mode)
-     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`
+    `INSERT INTO bulk_scans (id, brand, domain, competitors, status, total_topics, universe_id, prompt_mode, user_id)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)`
   ).run(
     id,
     input.brand,
@@ -26,7 +26,8 @@ export function createBulkScan(input: BulkScanInput, universeId?: string | null)
     JSON.stringify(input.competitors),
     input.topics.length,
     universeId || null,
-    input.promptMode || "question"
+    input.promptMode || "question",
+    userId || null
   );
 
   const insertTopic = db.prepare(
@@ -184,6 +185,7 @@ interface BulkScanRow {
   completed_at: string | null;
   universe_id: string | null;
   prompt_mode: PromptMode;
+  user_id: string | null;
 }
 
 interface BulkScanTopicRow {
@@ -220,6 +222,7 @@ function rowToRecord(row: BulkScanRow): BulkScanRecord {
     completedAt: row.completed_at,
     universeId: row.universe_id,
     promptMode: row.prompt_mode || "question",
+    userId: row.user_id,
   };
 }
 
@@ -256,11 +259,21 @@ export function getBulkScan(id: string): BulkScanDetail | null {
   return { ...rowToRecord(row), topics: topicRows.map(rowToTopicResult) };
 }
 
-export function listBulkScans(limit = 50): BulkScanRecord[] {
+/** A user's own standalone (non-universe) bulk scans, newest first. */
+export function listBulkScans(userId: string, limit = 50): BulkScanRecord[] {
   const rows = db
-    .prepare(`SELECT * FROM bulk_scans ORDER BY created_at DESC LIMIT ?`)
-    .all(limit) as BulkScanRow[];
+    .prepare(
+      `SELECT * FROM bulk_scans WHERE user_id = ? AND universe_id IS NULL ORDER BY created_at DESC LIMIT ?`
+    )
+    .all(userId, limit) as BulkScanRow[];
   return rows.map(rowToRecord);
+}
+
+/** Existence + ownership of a bulk scan/run — same null-means-"predates
+ * accounts, grandfathered" convention as getUniverseOwner(). */
+export function getBulkScanOwner(id: string): { exists: boolean; userId: string | null } {
+  const row = db.prepare(`SELECT user_id FROM bulk_scans WHERE id = ?`).get(id) as { user_id: string | null } | undefined;
+  return row ? { exists: true, userId: row.user_id } : { exists: false, userId: null };
 }
 
 /** All runs (any status) belonging to a universe, oldest first — the run

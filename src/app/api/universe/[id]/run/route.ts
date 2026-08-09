@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/anthropic";
-import { getUniverse, startUniverseRun } from "@/lib/universe";
+import { getCurrentUser } from "@/lib/session";
+import { getUniverseOwner, startUniverseRun } from "@/lib/universe";
 import type { PromptMode } from "@/lib/types";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Log in to run this universe." }, { status: 401 });
+  }
+
   if (!isConfigured()) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY is not configured on this server." },
@@ -15,8 +21,11 @@ export async function POST(
   }
 
   const { id } = await params;
-  const universe = getUniverse(id);
-  if (!universe) {
+  const owner = getUniverseOwner(id);
+  if (!owner.exists) {
+    return NextResponse.json({ error: "Universe not found." }, { status: 404 });
+  }
+  if (owner.userId && owner.userId !== user.id) {
     return NextResponse.json({ error: "Universe not found." }, { status: 404 });
   }
 
@@ -34,7 +43,7 @@ export async function POST(
 
   // No topics/CSV in the request body — startUniverseRun rebuilds the run
   // input entirely from what's stored on the universe.
-  const runId = startUniverseRun(id, promptMode);
+  const runId = startUniverseRun(id, promptMode, owner.userId ?? user.id);
 
   return NextResponse.json({ runId });
 }

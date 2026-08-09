@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/anthropic";
 import { createBulkScan, runBulkScan } from "@/lib/bulk-scan";
+import { getCurrentUser } from "@/lib/session";
 import type { BulkScanInput } from "@/lib/types";
 
 const MAX_TOPICS = 500;
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Log in to run a bulk scan." }, { status: 401 });
+  }
+
   if (!isConfigured()) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY is not configured on this server." },
@@ -66,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   const promptMode = body.promptMode === "keyword" ? "keyword" : "question";
   const input: BulkScanInput = { brand, domain, competitors, topics, promptMode };
-  const id = createBulkScan(input);
+  const id = createBulkScan(input, null, user.id);
 
   // Fire-and-forget: this process is expected to be a persistent Node server
   // (e.g. `next start` on Railway), not a serverless/edge function that dies
