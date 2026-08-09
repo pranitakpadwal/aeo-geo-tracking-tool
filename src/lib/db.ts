@@ -3,17 +3,42 @@ import fs from "fs";
 import path from "path";
 
 // Single-file SQLite database. Fine for one instance; set DATABASE_PATH to a
-// persistent volume in production (see README) or snapshots/history resets
-// on every deploy.
+// persistent volume in production (see README), or EVERYTHING resets on
+// every deploy — every user account, every universe, every uploaded
+// keyword list, every run. Railway (and most container hosts) give each
+// deploy a *fresh* filesystem unless you explicitly mount a persistent
+// Volume and point DATABASE_PATH at a file on it; without that, this falls
+// back to a path inside the app's own ephemeral directory, which is wiped
+// on every single deploy — indistinguishable from data loss, but it's a
+// missing deployment setting, not a bug in this code. isPersistentStorage()
+// below is what the UI warns from.
 const DEFAULT_PATH = path.join(process.cwd(), "data", "tracker.db");
 const dbPath = process.env.DATABASE_PATH || DEFAULT_PATH;
 
+export function isPersistentStorage(): boolean {
+  return Boolean(process.env.DATABASE_PATH);
+}
+
 if (!process.env.DATABASE_PATH) {
   fs.mkdirSync(path.dirname(DEFAULT_PATH), { recursive: true });
+  console.warn(
+    "\n" +
+      "⚠️  DATABASE_PATH is not set — using an ephemeral local path.\n" +
+      "    Every account, universe, and run in this database will be LOST on the next deploy.\n" +
+      "    Fix: mount a persistent Volume on your host and set DATABASE_PATH to a file on it\n" +
+      "    (e.g. Railway: Volume mounted at /data, DATABASE_PATH=/data/tracker.db). See README.\n"
+  );
 }
 
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
+// Next's build step (and any multi-worker/multi-instance setup) opens this
+// same file from several processes at once; better-sqlite3's default
+// busy_timeout is 0, so a second writer hitting a lock the first one holds
+// fails immediately (SQLITE_BUSY) instead of just waiting the few
+// milliseconds it actually takes. This was a real, repeatable build
+// failure, not a hypothetical.
+db.pragma("busy_timeout = 5000");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS scans (

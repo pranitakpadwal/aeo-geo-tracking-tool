@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
+import { isPersistentStorage } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
@@ -12,11 +13,28 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
+  const persistent = isPersistentStorage();
 
   return (
     <html lang="en">
       <body>
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+          {!persistent && (
+            <div
+              style={{
+                background: "#7a1f1f",
+                color: "#fff",
+                padding: "10px 24px",
+                fontSize: 13,
+                fontWeight: 700,
+                textAlign: "center",
+              }}
+            >
+              ⚠️ No persistent database configured on this server — every account, universe, and
+              run will be deleted on the next deploy. Set DATABASE_PATH to a file on a mounted
+              Volume before putting real data in. See README &ldquo;Deploying&rdquo;.
+            </div>
+          )}
           <header
             style={{
               background: "var(--bg-elevated)",
