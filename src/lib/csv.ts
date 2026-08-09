@@ -65,14 +65,27 @@ export interface CsvTopicRow {
 export function parseTopicRows(rows: string[][]): CsvTopicRow[] {
   if (rows.length === 0) return [];
 
-  const header = rows[0].map((h) => h.trim().toLowerCase().replace(/[\s_]+/g, "_"));
-  const topicIdx = header.findIndex((h) => h === "topic" || h === "keyword");
+  // Normalize hard: strip everything but letters/digits to underscores, so
+  // "Avg. Monthly Searches", "Search Volume", "Volume (India)" etc. all
+  // collapse to something matchable instead of silently missing the
+  // column and leaving every row's volume undefined (that bug shipped —
+  // see the "Total volume: 0" report). Real exports use wildly
+  // inconsistent header names for the same thing.
+  const header = rows[0].map((h) => h.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""));
+  const topicIdx = header.findIndex((h) => h === "topic" || h === "keyword" || h === "keywords" || h === "query" || h === "search_term");
   const typeIdx = header.findIndex((h) => h === "type");
   // "category" is the real sub-vertical (Skincare, Lips, Hair Care, ...) —
   // distinct from "type", which is usually a content-strategy label.
   const categoryIdx = header.findIndex((h) => h === "category" || h === "sub_category" || h === "subcategory");
   const tierIdx = header.findIndex((h) => h === "priority_tier" || h === "tier" || h === "priority");
-  const volumeIdx = header.findIndex((h) => h === "volume" || h === "search_volume");
+  const volumeIdx = header.findIndex(
+    (h) =>
+      h === "volume" ||
+      h === "vol" ||
+      h === "sv" ||
+      h.includes("volume") || // catches search_volume, monthly_volume, avg_monthly_volume, volume_india, ...
+      h.includes("searches") // catches avg_monthly_searches, monthly_searches, ...
+  );
 
   if (topicIdx === -1) {
     // No recognizable header — treat every non-empty first-column value as a bare topic list.

@@ -204,6 +204,11 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_bulk_scans_user ON bulk_scans(user_id);`
 //      many thousand keywords the universe holds overall.
 addColumnIfMissing("universes", "categorization_status", `categorization_status TEXT`); // pending|running|complete|error, NULL for pre-existing small universes
 addColumnIfMissing("universes", "categorization_error", `categorization_error TEXT`);
+// The theme list proposeThemes() settled on, persisted so a retry pass
+// (re-running runCategorization on whatever's still uncategorized) reuses
+// the same themes instead of proposing a different set and ending up with
+// two incompatible theme vocabularies in one universe.
+addColumnIfMissing("universes", "theme_list", `theme_list TEXT`);
 addColumnIfMissing("universes", "tracked_themes", `tracked_themes TEXT NOT NULL DEFAULT '[]'`); // JSON array of opted-in category values
 addColumnIfMissing("universes", "auto_run_enabled", `auto_run_enabled INTEGER NOT NULL DEFAULT 0`);
 addColumnIfMissing("universes", "last_auto_run_at", `last_auto_run_at TEXT`);

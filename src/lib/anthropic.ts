@@ -271,13 +271,27 @@ export async function proposeThemes(
  * results stay consistent across a 10,000-row upload instead of each batch
  * inventing its own categories. No web_search — this is a plain
  * classification call, batched to control call count on large imports.
+ *
+ * Returns one entry per input keyword, same order — `null` where Claude
+ * didn't return a valid assignment for that keyword (rather than guessing
+ * "Uncategorized"), so the caller can retry just those instead of quietly
+ * mass-mislabeling.
+ *
+ * The response schema pairs each assignment with the keyword's own number
+ * ({i, t}, not a bare positional array) deliberately: a plain
+ * one-integer-per-position array is fragile at batch sizes like 50-100 —
+ * if the model skips or double-counts even one item, every assignment
+ * after that point silently shifts out of alignment with the wrong
+ * keyword, cascading into a batch that's mostly wrong instead of mostly
+ * right. Keying by explicit keyword number is self-correcting: a skipped
+ * item just leaves one gap (retried), not a cascade.
  */
-export async function classifyKeywordsAgainstThemes(keywords: string[], themes: string[]): Promise<string[]> {
+export async function classifyKeywordsAgainstThemes(keywords: string[], themes: string[]): Promise<(string | null)[]> {
   if (keywords.length === 0) return [];
 
   const response = await client().messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     output_config: {
       effort: "low",
       format: {
@@ -287,8 +301,15 @@ export async function classifyKeywordsAgainstThemes(keywords: string[], themes: 
           properties: {
             assignments: {
               type: "array",
-              items: { type: "integer" },
-              description: "One entry per input keyword, in the same order — the 0-based index into the theme list below.",
+              items: {
+                type: "object",
+                properties: {
+                  i: { type: "integer", description: "The keyword's number from the input list below (1-based)." },
+                  t: { type: "integer", description: "0-based index into the theme list this keyword belongs to." },
+                },
+                required: ["i", "t"],
+                additionalProperties: false,
+              },
             },
           },
           required: ["assignments"],
@@ -303,7 +324,7 @@ export async function classifyKeywordsAgainstThemes(keywords: string[], themes: 
           `Themes (0-indexed):`,
           themes.map((t, i) => `${i}. ${t}`).join("\n"),
           "",
-          `Classify each of the following ${keywords.length} keywords into exactly one of the themes above by its index. A keyword that is just a brand name (the site's own brand, or a named competitor) goes to the "Brand" theme; otherwise pick whichever theme it's most clearly about.`,
+          `Classify each of the following ${keywords.length} keywords into exactly one of the themes above. Return one {i, t} pair per keyword — i is that keyword's number below, t is the theme's index. A keyword that is just a brand name (the site's own brand, or a named competitor) goes to the "Brand" theme; otherwise pick whichever theme it's most clearly about. Every keyword must get exactly one pair.`,
           "",
           keywords.map((k, i) => `${i + 1}. ${k}`).join("\n"),
         ].join("\n"),
@@ -312,8 +333,15 @@ export async function classifyKeywordsAgainstThemes(keywords: string[], themes: 
   });
 
   const text = extractText(response);
-  const parsed = JSON.parse(text) as { assignments: number[] };
-  return keywords.map((_, i) => themes[parsed.assignments[i]] ?? "Uncategorized");
+  const parsed = JSON.parse(text) as { assignments: { i: number; t: number }[] };
+
+  const byIndex = new Map<number, number>();
+  for (const a of parsed.assignments) byIndex.set(a.i, a.t);
+
+  return keywords.map((_, i) => {
+    const themeIdx = byIndex.get(i + 1);
+    return themeIdx !== undefined ? (themes[themeIdx] ?? null) : null;
+  });
 }
 
 export interface GroundedAnswer {

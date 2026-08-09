@@ -46,6 +46,7 @@ export default function UniverseView({ id }: { id: string }) {
   const [runError, setRunError] = useState<string | null>(null);
   const [autoRunPending, setAutoRunPending] = useState(false);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [recategorizing, setRecategorizing] = useState(false);
   const themesTouched = useRef(false);
 
   const loadUniverse = useCallback(async () => {
@@ -173,6 +174,16 @@ export default function UniverseView({ id }: { id: string }) {
     }
   }
 
+  async function retryCategorization() {
+    setRecategorizing(true);
+    try {
+      await fetch(`/api/universe/${id}/recategorize`, { method: "POST" });
+      await loadUniverse(); // picks up the 'running' status so the poller below takes over
+    } finally {
+      setRecategorizing(false);
+    }
+  }
+
   if (!universe) {
     return (
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px", color: "var(--text-muted)" }}>
@@ -267,9 +278,61 @@ export default function UniverseView({ id }: { id: string }) {
               fontSize: 13,
             }}
           >
-            Categorization failed: {universe.categorizationError}
+            <div style={{ marginBottom: 8 }}>Categorization failed: {universe.categorizationError}</div>
+            <button
+              onClick={retryCategorization}
+              disabled={recategorizing}
+              style={{
+                background: "var(--danger)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                padding: "6px 12px",
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: recategorizing ? "default" : "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {recategorizing ? "Retrying…" : "Retry"}
+            </button>
           </div>
         )}
+
+        {!isCategorizing &&
+          universe.categorizationStatus === "complete" &&
+          universe.categorizationError &&
+          universe.themeSummary.some((t) => t.theme === "Uncategorized" && t.keywordCount > 0) && (
+            <div
+              style={{
+                border: "1px solid var(--warn)",
+                background: "var(--warn-bg)",
+                color: "#7a5f00",
+                padding: "12px 14px",
+                marginBottom: 24,
+                fontSize: 13,
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>{universe.categorizationError}</div>
+              <button
+                onClick={retryCategorization}
+                disabled={recategorizing}
+                style={{
+                  background: "var(--warn)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "6px 12px",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: recategorizing ? "default" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {recategorizing ? "Retrying…" : "Retry categorization for the rest"}
+              </button>
+            </div>
+          )}
 
         {!isCategorizing && universe.themeSummary.length > 0 && (
           <>

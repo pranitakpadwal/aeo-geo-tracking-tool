@@ -22,9 +22,11 @@ const TOP_N_PER_THEME = 20;
 // Categorization (the cheap pre-run pass) samples this many of the
 // highest-volume keywords to propose a theme list, then classifies every
 // keyword against that fixed list in batches of this size. Both bounds
-// keep classification cost flat regardless of total upload size.
+// keep classification cost flat regardless of total upload size. Batch
+// size is deliberately modest (not e.g. 100+) — smaller batches are more
+// reliable for a model to classify item-by-item without drifting.
 const CATEGORIZE_SAMPLE_SIZE = 300;
-const CATEGORIZE_BATCH_SIZE = 100;
+const CATEGORIZE_BATCH_SIZE = 40;
 
 /**
  * Persistent brand+category tracker. Created once with a fixed brand,
@@ -227,21 +229,60 @@ export function getThemeSummary(universeId: string): ThemeSummaryRow[] {
   }));
 }
 
+const BATCH_RETRIES = 3;
+const RETRY_BACKOFF_MS = 1500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * The cheap categorization pass for a large raw upload: samples the
- * highest-volume keywords to propose a fixed theme list, then classifies
- * every keyword without an existing category against that list, in
- * batches. No web_search, no per-keyword call — cost is
+ * Classifies one batch with retries, backing off between attempts. Never
+ * throws — a batch that fails every attempt just comes back with `null`
+ * for every keyword in it (left uncategorized, retryable later) instead of
+ * taking the whole categorization job down with it. This is what a single
+ * flaky/rate-limited call used to do before: one bad batch aborted
+ * everything after it, silently dumping the rest of a large upload into
+ * "Uncategorized".
+ */
+async function classifyBatchWithRetry(keywords: string[], themes: string[]): Promise<(string | null)[]> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < BATCH_RETRIES; attempt++) {
+    try {
+      return await classifyKeywordsAgainstThemes(keywords, themes);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < BATCH_RETRIES - 1) await sleep(RETRY_BACKOFF_MS * (attempt + 1));
+    }
+  }
+  console.error(`Classification batch failed after ${BATCH_RETRIES} attempts:`, lastErr);
+  return keywords.map(() => null);
+}
+
+/**
+ * The cheap categorization pass for a large raw upload: proposes a fixed
+ * theme list (once — persisted to `theme_list`, reused on any retry so a
+ * universe never ends up with two incompatible theme vocabularies), then
+ * classifies every keyword that still has no category against that list,
+ * in batches. No web_search, no per-keyword call — cost is
  * O(sample) + O(total / batch size), not O(total).
  *
+ * A keyword whose batch fails (even after retries) or whose assignment
+ * comes back unparseable is left with category = NULL rather than a
+ * literal "Uncategorized" string — the theme summary already displays
+ * NULL as "Uncategorized" (see getThemeSummary), and leaving it NULL is
+ * what makes calling this function again later ("Retry categorization" in
+ * the UI) pick up exactly the keywords that didn't make it, instead of
+ * skipping them forever because they technically have "a category" now.
+ *
  * Meant to be called fire-and-forget right after createUniverse() when it
- * returned categorization_status = 'pending'. Safe to call on a universe
- * that's already 'complete' — it's a no-op (nothing left with a NULL
- * category).
+ * returned categorization_status = 'pending', or again later to retry
+ * whatever's still uncategorized. Safe to call on a universe that's
+ * already 'complete' — it's a no-op if nothing has a NULL category.
  */
 export async function runCategorization(universeId: string): Promise<void> {
-  const universe = db.prepare(`SELECT brand, competitors FROM universes WHERE id = ?`).get(universeId) as
-    | { brand: string; competitors: string }
+  const universe = db.prepare(`SELECT brand, competitors, theme_list FROM universes WHERE id = ?`).get(universeId) as
+    | { brand: string; competitors: string; theme_list: string | null }
     | undefined;
   if (!universe) return;
 
@@ -261,22 +302,43 @@ export async function runCategorization(universeId: string): Promise<void> {
       return;
     }
 
-    const competitors = (JSON.parse(universe.competitors || "[]") as CompetitorInput[]).map((c) => c.name);
-    const sample = uncategorized.slice(0, CATEGORIZE_SAMPLE_SIZE).map((r) => r.topic);
-    const themes = await proposeThemes(sample, { brand: universe.brand, competitors });
+    let themes: string[];
+    if (universe.theme_list) {
+      themes = JSON.parse(universe.theme_list) as string[];
+    } else {
+      const competitors = (JSON.parse(universe.competitors || "[]") as CompetitorInput[]).map((c) => c.name);
+      const sample = uncategorized.slice(0, CATEGORIZE_SAMPLE_SIZE).map((r) => r.topic);
+      themes = await proposeThemes(sample, { brand: universe.brand, competitors });
+      db.prepare(`UPDATE universes SET theme_list = ? WHERE id = ?`).run(JSON.stringify(themes), universeId);
+    }
 
     const updateCategory = db.prepare(`UPDATE universe_topics SET category = ? WHERE id = ?`);
+    let failedCount = 0;
     for (let i = 0; i < uncategorized.length; i += CATEGORIZE_BATCH_SIZE) {
       const batch = uncategorized.slice(i, i + CATEGORIZE_BATCH_SIZE);
-      const assigned = await classifyKeywordsAgainstThemes(batch.map((r) => r.topic), themes);
+      const assigned = await classifyBatchWithRetry(batch.map((r) => r.topic), themes);
       const updateMany = db.transaction(() => {
-        batch.forEach((r, j) => updateCategory.run(assigned[j] || "Uncategorized", r.id));
+        batch.forEach((r, j) => {
+          if (assigned[j]) updateCategory.run(assigned[j], r.id);
+          else failedCount++; // left NULL — picked up by a future retry pass
+        });
       });
       updateMany();
     }
 
-    db.prepare(`UPDATE universes SET categorization_status = 'complete' WHERE id = ?`).run(universeId);
+    db.prepare(
+      `UPDATE universes SET categorization_status = 'complete', categorization_error = ? WHERE id = ?`
+    ).run(
+      failedCount > 0
+        ? `${failedCount} of ${uncategorized.length} keywords couldn't be classified this pass — still shown under "Uncategorized"; retry to pick up just those.`
+        : null,
+      universeId
+    );
   } catch (err) {
+    // Only reachable now for something outside the per-batch retry loop —
+    // e.g. proposeThemes itself failing (no theme list to classify
+    // against at all). categorization_status stays 'error' so the UI can
+    // offer a full retry.
     const message = err instanceof Error ? err.message : "Unknown error";
     db.prepare(`UPDATE universes SET categorization_status = 'error', categorization_error = ? WHERE id = ?`).run(
       message,
