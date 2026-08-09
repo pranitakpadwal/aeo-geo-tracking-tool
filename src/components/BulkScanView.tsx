@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import BulkTopicRow from "./BulkTopicRow";
 import { Bar, BarChart, Delta, PieChart, brandColor, statusFor, statusStyle } from "./Charts";
+import { buildSummary } from "@/lib/report-calc";
 import type { BulkScanDetail } from "@/lib/types";
-import type { BulkScanReport } from "@/lib/report";
+import type { BulkScanReport } from "@/lib/report-calc";
 
 export default function BulkScanView({ id }: { id: string }) {
   const [scan, setScan] = useState<BulkScanDetail | null>(null);
@@ -50,6 +51,7 @@ export default function BulkScanView({ id }: { id: string }) {
   const tiers = Array.from(new Set(scan.topics.map((t) => t.priorityTier).filter(Boolean))) as string[];
   const zipped = scan.topics.map((t, i) => ({ result: t, leader: report?.topics[i]?.leader ?? null }));
   const filteredRows = zipped.filter(({ result }) => tierFilter === "all" || result.priorityTier === tierFilter);
+  const summary = report ? buildSummary(report) : null;
 
   return (
     <div style={{ maxWidth: 900, margin: "28px auto 60px", padding: "0 16px" }}>
@@ -102,8 +104,59 @@ export default function BulkScanView({ id }: { id: string }) {
           </div>
         )}
 
-        {report && (
+        {report && summary && (
           <>
+            <h1
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                margin: "10px 0 4px",
+                paddingBottom: 8,
+                borderBottom: "3px solid var(--accent)",
+              }}
+            >
+              Summary
+            </h1>
+            <div
+              style={{
+                background: "var(--bg-alt)",
+                border: "1px solid var(--border-soft)",
+                borderLeft: "4px solid var(--accent)",
+                padding: "14px 18px",
+                marginBottom: 14,
+                fontSize: 13,
+                lineHeight: 1.7,
+              }}
+            >
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>{summary.brand}</strong> ranks <strong>#{summary.brandRank}</strong> of{" "}
+                {summary.totalBrandsTracked} brands tracked, with a Visibility Score of{" "}
+                <strong>{summary.brandVisibilityScore}</strong>
+                {summary.brandRank === 1 ? (
+                  <> — the category leader across {summary.totalTopics} tracked topics.</>
+                ) : (
+                  <>
+                    {" "}
+                    — <strong>{summary.gapToLeader}</strong> points behind category leader{" "}
+                    <strong>{summary.overallLeader}</strong> ({summary.overallLeaderScore}), across{" "}
+                    {summary.totalTopics} tracked topics.
+                  </>
+                )}
+              </p>
+              {summary.strongestTheme && summary.weakestTheme && summary.strongestTheme.theme !== summary.weakestTheme.theme && (
+                <p style={{ margin: "0 0 6px" }}>
+                  Strongest theme: <strong>{summary.strongestTheme.theme}</strong> (score{" "}
+                  {summary.strongestTheme.score}). Weakest: <strong>{summary.weakestTheme.theme}</strong> (score{" "}
+                  {summary.weakestTheme.score}).
+                </p>
+              )}
+              {summary.biggestMover && (
+                <p style={{ margin: 0 }}>
+                  Biggest move since the last run: <strong>{summary.biggestMover.brand}</strong>{" "}
+                  <Delta value={summary.biggestMover.citationRateDelta} /> citation rate.
+                </p>
+              )}
+            </div>
             <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 4px" }}>
               This run used{" "}
               <strong>{scan.promptMode === "keyword" ? "keywords as-is" : "rewritten shopper questions"}</strong>{" "}

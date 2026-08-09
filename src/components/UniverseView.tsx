@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bar, BarChart, Delta, PieChart, brandColor, statusFor, statusStyle } from "./Charts";
+import BulkTopicRow from "./BulkTopicRow";
+import { buildSummary } from "@/lib/report-calc";
 import type { BulkScanDetail, PromptMode, UniverseDetail } from "@/lib/types";
 import type { UniverseRunReport } from "@/lib/report";
 
@@ -38,6 +40,7 @@ export default function UniverseView({ id }: { id: string }) {
   const [report, setReport] = useState<UniverseRunReport | null>(null);
   const [starting, setStarting] = useState(false);
   const [promptMode, setPromptMode] = useState<PromptMode>("question");
+  const [tierFilter, setTierFilter] = useState<string | "all">("all");
 
   const loadUniverse = useCallback(async () => {
     const res = await fetch(`/api/universe/${id}`, { cache: "no-store" });
@@ -115,6 +118,13 @@ export default function UniverseView({ id }: { id: string }) {
   const pct = run && run.totalTopics ? Math.round((run.completedTopics / run.totalTopics) * 100) : 0;
   const isRunning = run && run.status !== "complete" && run.status !== "error";
   const runs = universe.runs;
+  const summary = report ? buildSummary(report) : null;
+  const tiers = run ? (Array.from(new Set(run.topics.map((t) => t.priorityTier).filter(Boolean))) as string[]) : [];
+  const zipped =
+    run && report
+      ? run.topics.map((t, i) => ({ result: t, leader: report.topics[i]?.leader ?? null }))
+      : [];
+  const filteredTopicRows = zipped.filter(({ result }) => tierFilter === "all" || result.priorityTier === tierFilter);
 
   return (
     <div style={{ maxWidth: 900, margin: "28px auto 60px", padding: "0 16px" }}>
@@ -243,14 +253,55 @@ export default function UniverseView({ id }: { id: string }) {
           </>
         )}
 
-        {report && run && (
+        {report && run && summary && (
           <>
+            <h1 style={{ ...sectionHeading, marginTop: 10 }}>Summary</h1>
+            <div
+              style={{
+                background: "var(--bg-alt)",
+                border: "1px solid var(--border-soft)",
+                borderLeft: "4px solid var(--accent)",
+                padding: "14px 18px",
+                marginBottom: 14,
+                fontSize: 13,
+                lineHeight: 1.7,
+              }}
+            >
+              <p style={{ margin: "0 0 6px" }}>
+                <strong>{summary.brand}</strong> ranks <strong>#{summary.brandRank}</strong> of{" "}
+                {summary.totalBrandsTracked} brands tracked, with a Visibility Score of{" "}
+                <strong>{summary.brandVisibilityScore}</strong>
+                {summary.brandRank === 1 ? (
+                  <> — the category leader across {summary.totalTopics} tracked topics.</>
+                ) : (
+                  <>
+                    {" "}
+                    — <strong>{summary.gapToLeader}</strong> points behind category leader{" "}
+                    <strong>{summary.overallLeader}</strong> ({summary.overallLeaderScore}), across{" "}
+                    {summary.totalTopics} tracked topics.
+                  </>
+                )}
+              </p>
+              {summary.strongestTheme && summary.weakestTheme && summary.strongestTheme.theme !== summary.weakestTheme.theme && (
+                <p style={{ margin: "0 0 6px" }}>
+                  Strongest theme: <strong>{summary.strongestTheme.theme}</strong> (score{" "}
+                  {summary.strongestTheme.score}). Weakest: <strong>{summary.weakestTheme.theme}</strong> (score{" "}
+                  {summary.weakestTheme.score}).
+                </p>
+              )}
+              {summary.biggestMover && (
+                <p style={{ margin: 0 }}>
+                  Biggest move since the last run: <strong>{summary.biggestMover.brand}</strong>{" "}
+                  <Delta value={summary.biggestMover.citationRateDelta} /> citation rate.
+                </p>
+              )}
+            </div>
             <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 4px" }}>
               This run used{" "}
               <strong>{run.promptMode === "keyword" ? "keywords as-is" : "rewritten shopper questions"}</strong>{" "}
               as the prompt sent to Claude.
             </p>
-            <h1 style={{ ...sectionHeading, marginTop: 10 }}>0. Market Share Snapshot</h1>
+            <h1 style={sectionHeading}>0. Market Share Snapshot</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
               Mentions is a share question — shown as a pie. Citations (real cited URLs) is a magnitude/business-
               value question, not a share of a fixed pie — shown as raw scale.
@@ -391,7 +442,67 @@ export default function UniverseView({ id }: { id: string }) {
               </table>
             </div>
 
-            <h1 style={sectionHeading}>3. Cited Pages</h1>
+            <h1 style={sectionHeading}>3. Topic-Level Breakdown</h1>
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
+              Every tracked topic, expandable — who was mentioned/cited (including every competitor site), the
+              actual question asked, and the real cited URLs per brand.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+              {tiers.length > 0 && (
+                <select
+                  value={tierFilter}
+                  onChange={(e) => setTierFilter(e.target.value)}
+                  style={{
+                    background: "var(--bg-elevated)",
+                    color: "var(--text)",
+                    border: "1px solid var(--border)",
+                    padding: "6px 10px",
+                    fontSize: 12.5,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <option value="all">All tiers</option>
+                  {tiers.sort().map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.6fr 0.6fr 0.7fr 1.2fr auto",
+                gap: 10,
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: "#fff",
+                background: "var(--table-head)",
+                padding: "8px 10px",
+              }}
+            >
+              <span>Topic</span>
+              <span>Tier</span>
+              <span>Volume</span>
+              <span>Who&rsquo;s cited</span>
+              <span></span>
+            </div>
+            {filteredTopicRows.map(({ result, leader }) => (
+              <BulkTopicRow
+                key={result.id}
+                result={result}
+                brandName={universe.brand}
+                competitorNames={competitorNames}
+                leader={leader}
+              />
+            ))}
+            <p style={{ fontSize: 11.5, fontStyle: "italic", color: "var(--text-muted)", margin: "12px 0 0" }}>
+              Filled dot = cited (a real URL on that domain showed up as a source). Amber dot = mentioned by name
+              but no URL cited.
+            </p>
+
+            <h1 style={sectionHeading}>4. Cited Pages</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
               Every distinct URL cited this run, per brand, ranked by how many topics cited it
               {report.citedPages.some((p) => p.status) ? " — with new/continuing/lost vs. the previous run." : "."}
