@@ -161,6 +161,107 @@ export function BarChart({ data }: { data: { label: string; value: number; color
   return <canvas ref={ref} style={{ display: "block", margin: "0 auto" }} />;
 }
 
+/**
+ * Multi-series trend line — visibility score per brand across every run so
+ * far. This is what makes the summary/snapshot feel like it's compounding
+ * ("the more you run it, the more this fills in") instead of only ever
+ * comparing to the single previous run.
+ */
+export function LineChart({
+  series,
+  xLabels,
+}: {
+  series: { label: string; color: string; values: number[] }[];
+  xLabels: string[];
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = 640,
+      h = 220;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = "100%";
+    canvas.style.maxWidth = w + "px";
+    canvas.style.height = h + "px";
+    ctx.scale(dpr, dpr);
+
+    const padL = 34,
+      padR = 14,
+      padT = 14,
+      padB = 26;
+    const plotW = w - padL - padR,
+      plotH = h - padT - padB;
+    const n = xLabels.length;
+    const max = Math.max(100, ...series.flatMap((s) => s.values)) * 1.05;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = resolveColor("var(--border)");
+    ctx.fillStyle = resolveColor("var(--text-faint)");
+    ctx.font = "9px Arial";
+    ctx.textAlign = "right";
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (plotH / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(w - padR, y);
+      ctx.stroke();
+      ctx.fillText(String(Math.round(max - (max / 4) * i)), padL - 6, y + 3);
+    }
+
+    const xAt = (i: number) => (n <= 1 ? padL + plotW / 2 : padL + (plotW / (n - 1)) * i);
+
+    ctx.font = "9px Arial";
+    ctx.fillStyle = resolveColor("var(--text-muted)");
+    ctx.textAlign = "center";
+    xLabels.forEach((label, i) => {
+      if (n > 8 && i % Math.ceil(n / 8) !== 0 && i !== n - 1) return; // thin out labels on a long history
+      ctx.fillText(label, xAt(i), h - 8);
+    });
+
+    for (const s of series) {
+      ctx.strokeStyle = resolveColor(s.color);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      s.values.forEach((v, i) => {
+        const x = xAt(i);
+        const y = padT + plotH - (v / max) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = resolveColor(s.color);
+      s.values.forEach((v, i) => {
+        const x = xAt(i);
+        const y = padT + plotH - (v / max) * plotH;
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+  }, [series, xLabels]);
+
+  return (
+    <div>
+      <canvas ref={ref} style={{ display: "block" }} />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px", marginTop: 8 }}>
+        {series.map((s) => (
+          <span key={s.label} style={{ fontSize: 11, color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: s.color, display: "inline-block" }} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function statusFor(citationRate: number, maxOther: number, hasCitations: boolean): "leader" | "behind" | "lost" {
   if (!hasCitations && citationRate === 0) return "lost";
   if (citationRate >= maxOther) return "leader";

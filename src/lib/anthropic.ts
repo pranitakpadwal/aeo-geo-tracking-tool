@@ -205,6 +205,117 @@ export async function groupTopicsIntoThemes(topics: string[], targetGroups = 5):
   });
 }
 
+/**
+ * Proposes a fixed, small theme list for a large raw keyword upload (up to
+ * thousands of rows) — the first half of the two-step "categorize cheaply,
+ * then let the user pick what to scan" pipeline for big imports. Looks at a
+ * representative sample (not the whole list — that's the cost control) and
+ * always includes a "Brand" theme so brand-name/competitor-name keywords
+ * have somewhere to land distinct from real product categories.
+ *
+ * No web_search tool here and no per-keyword call — this is one call total,
+ * regardless of how many thousand keywords are being categorized.
+ */
+export async function proposeThemes(
+  sampleKeywords: string[],
+  opts: { brand: string; competitors: string[] }
+): Promise<string[]> {
+  if (sampleKeywords.length === 0) return ["Brand"];
+
+  const response = await client().messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    output_config: {
+      effort: "medium",
+      format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            themes: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                'Short, human-readable category names a brand owner would recognize (e.g. "Skincare", "Hair Care", "Fragrance"). Do NOT include a "Brand" theme — that is added automatically.',
+            },
+          },
+          required: ["themes"],
+          additionalProperties: false,
+        },
+      },
+    },
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Below is a sample of ${sampleKeywords.length} keywords from a larger keyword-research export for "${opts.brand}" (competitors: ${opts.competitors.join(", ") || "none listed"}).`,
+          `Propose a small, fixed set of product/topic categories (aim for 8-15) that would cleanly cover this whole space — real sub-verticals a brand owner would recognize, not generic labels. Every keyword in the full export will later be sorted into one of these categories, so make them broad enough to not leave obvious gaps, but specific enough to be useful (e.g. "Skincare" and "Hair Care" as separate categories, not one combined "Beauty" category).`,
+          `Do not propose a "Brand" or "Branded" category — that bucket (for keywords that are just the brand's own name or a named competitor) is added automatically, don't duplicate it.`,
+          "",
+          sampleKeywords.map((k, i) => `${i + 1}. ${k}`).join("\n"),
+        ].join("\n"),
+      },
+    ],
+  });
+
+  const text = extractText(response);
+  const parsed = JSON.parse(text) as { themes: string[] };
+  const themes = parsed.themes.filter((t) => t.trim() && t.trim().toLowerCase() !== "brand");
+  return ["Brand", ...themes];
+}
+
+/**
+ * Classifies a batch of keywords against a fixed theme list (from
+ * proposeThemes) — the second half of the large-upload categorization
+ * pipeline. Every batch is classified against the *same* theme list, so
+ * results stay consistent across a 10,000-row upload instead of each batch
+ * inventing its own categories. No web_search — this is a plain
+ * classification call, batched to control call count on large imports.
+ */
+export async function classifyKeywordsAgainstThemes(keywords: string[], themes: string[]): Promise<string[]> {
+  if (keywords.length === 0) return [];
+
+  const response = await client().messages.create({
+    model: MODEL,
+    max_tokens: 4096,
+    output_config: {
+      effort: "low",
+      format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            assignments: {
+              type: "array",
+              items: { type: "integer" },
+              description: "One entry per input keyword, in the same order — the 0-based index into the theme list below.",
+            },
+          },
+          required: ["assignments"],
+          additionalProperties: false,
+        },
+      },
+    },
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Themes (0-indexed):`,
+          themes.map((t, i) => `${i}. ${t}`).join("\n"),
+          "",
+          `Classify each of the following ${keywords.length} keywords into exactly one of the themes above by its index. A keyword that is just a brand name (the site's own brand, or a named competitor) goes to the "Brand" theme; otherwise pick whichever theme it's most clearly about.`,
+          "",
+          keywords.map((k, i) => `${i + 1}. ${k}`).join("\n"),
+        ].join("\n"),
+      },
+    ],
+  });
+
+  const text = extractText(response);
+  const parsed = JSON.parse(text) as { assignments: number[] };
+  return keywords.map((_, i) => themes[parsed.assignments[i]] ?? "Uncategorized");
+}
+
 export interface GroundedAnswer {
   text: string;
   citations: { url: string; title: string | null }[];

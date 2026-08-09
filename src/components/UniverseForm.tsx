@@ -145,14 +145,16 @@ export default function UniverseForm() {
       </div>
       <div>
         <label style={labelStyle}>
-          Topics — the fixed topic list for this universe, as a <span className="mono">.csv</span> or{" "}
-          <span className="mono">.xlsx</span> file. Column <span className="mono">topic</span> required;{" "}
-          <span className="mono">category</span> (the sub-vertical, e.g. Skincare, Lips, Hair Care — what the
-          theme breakdown groups by), <span className="mono">type</span>,{" "}
+          Keywords — up to ~12,000 rows, as a <span className="mono">.csv</span> or <span className="mono">.xlsx</span> file.
+          Column <span className="mono">topic</span> (or <span className="mono">keyword</span>) required;{" "}
+          <span className="mono">category</span>, <span className="mono">type</span>,{" "}
           <span className="mono">priority_tier</span>, <span className="mono">volume</span> optional (extra
-          columns are ignored). No <span className="mono">category</span> column? Just upload your raw topic
-          list — Claude auto-groups them into themes on the first run, no hand-labeling needed. Set once — every
-          future run reuses this list, no re-upload needed.
+          columns are ignored, and <span className="mono">volume</span> matters — it&rsquo;s what decides which
+          keywords in a theme actually get scanned). No <span className="mono">category</span> column? Upload the
+          raw list as-is — after creating the universe, we categorize every keyword (Brand vs. real sub-verticals
+          like Skincare/Hair Care) in the background, cheaply, with no per-keyword search cost. You then pick
+          which themes to actually track; nothing gets scanned until you do. Set once — every future run reuses
+          this list, no re-upload needed.
         </label>
         <input
           ref={fileInputRef}
@@ -192,11 +194,12 @@ export default function UniverseForm() {
           fontFamily: "inherit",
         }}
       >
-        {loading ? "Creating…" : `Create universe & run first scan${topics.length ? ` (${topics.length} topics)` : ""}`}
+        {loading ? "Creating…" : `Create universe${topics.length ? ` (${topics.length} keywords)` : ""}`}
       </button>
       <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-        This creates a persistent universe and kicks off its first run immediately. From then on, come back to
-        this universe&rsquo;s page and hit &ldquo;Run now&rdquo; any time — no CSV re-upload required.
+        No scan runs yet — this just uploads and categorizes. On the next page you&rsquo;ll see your universe
+        broken into themes (with keyword counts and volume), pick which ones to track, then hit &ldquo;Run
+        now&rdquo;. That keeps cost bounded no matter how many keywords you uploaded.
       </p>
     </form>
   );

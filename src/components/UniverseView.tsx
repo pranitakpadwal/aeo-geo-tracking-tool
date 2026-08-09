@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bar, BarChart, Delta, PieChart, brandColor, statusFor, statusStyle } from "./Charts";
+import { Bar, BarChart, Delta, LineChart, PieChart, SERIES_COLORS, brandColor, statusFor, statusStyle } from "./Charts";
 import BulkTopicRow from "./BulkTopicRow";
 import { buildSummary } from "@/lib/report-calc";
 import type { BulkScanDetail, PromptMode, UniverseDetail } from "@/lib/types";
-import type { UniverseRunReport } from "@/lib/report";
+import type { TrendPoint, UniverseRunReport } from "@/lib/report";
 
 const pageBadge: Record<string, { bg: string; text: string; label: string }> = {
   new: { bg: "var(--good-bg)", text: "var(--good)", label: "New" },
@@ -41,13 +41,25 @@ export default function UniverseView({ id }: { id: string }) {
   const [starting, setStarting] = useState(false);
   const [promptMode, setPromptMode] = useState<PromptMode>("question");
   const [tierFilter, setTierFilter] = useState<string | "all">("all");
+  const [selectedThemes, setSelectedThemes] = useState<Set<string>>(new Set());
+  const [savingThemes, setSavingThemes] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [autoRunPending, setAutoRunPending] = useState(false);
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const themesTouched = useRef(false);
 
   const loadUniverse = useCallback(async () => {
     const res = await fetch(`/api/universe/${id}`, { cache: "no-store" });
     if (!res.ok) return null;
     const data: UniverseDetail = await res.json();
     setUniverse(data);
+    if (!themesTouched.current) setSelectedThemes(new Set(data.trackedThemes));
     return data;
+  }, [id]);
+
+  const loadTrend = useCallback(async () => {
+    const res = await fetch(`/api/universe/${id}/trend`, { cache: "no-store" });
+    if (res.ok) setTrend(await res.json());
   }, [id]);
 
   useEffect(() => {
@@ -55,12 +67,21 @@ export default function UniverseView({ id }: { id: string }) {
     async function load() {
       const data = await loadUniverse();
       if (!cancelled && data?.latestRunId) setRunId(data.latestRunId);
+      if (!cancelled) loadTrend();
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [loadUniverse]);
+  }, [loadUniverse, loadTrend]);
+
+  // Poll while categorization (the cheap pre-run classification pass) is
+  // still working through a large upload.
+  useEffect(() => {
+    if (universe?.categorizationStatus !== "pending" && universe?.categorizationStatus !== "running") return;
+    const timer = setTimeout(loadUniverse, 3000);
+    return () => clearTimeout(timer);
+  }, [universe?.categorizationStatus, loadUniverse]);
 
   useEffect(() => {
     if (!runId) return;
@@ -78,6 +99,7 @@ export default function UniverseView({ id }: { id: string }) {
         const rRes = await fetch(`/api/universe/${id}/run/${runId}/report`, { cache: "no-store" });
         if (rRes.ok && !cancelled) setReport(await rRes.json());
         loadUniverse();
+        loadTrend();
       } else if (data.status !== "error") {
         timer = setTimeout(poll, 2500);
       }
@@ -87,10 +109,11 @@ export default function UniverseView({ id }: { id: string }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [id, runId, loadUniverse]);
+  }, [id, runId, loadUniverse, loadTrend]);
 
   async function runNow() {
     setStarting(true);
+    setRunError(null);
     setReport(null);
     setRun(null);
     try {
@@ -101,8 +124,52 @@ export default function UniverseView({ id }: { id: string }) {
       });
       const data = await res.json();
       if (res.ok) setRunId(data.runId);
+      else setRunError(data.error || "Failed to start run.");
     } finally {
       setStarting(false);
+    }
+  }
+
+  function toggleTheme(theme: string) {
+    themesTouched.current = true;
+    setSelectedThemes((prev) => {
+      const next = new Set(prev);
+      if (next.has(theme)) next.delete(theme);
+      else next.add(theme);
+      return next;
+    });
+  }
+
+  async function saveTrackedThemes() {
+    setSavingThemes(true);
+    try {
+      const res = await fetch(`/api/universe/${id}/tracked-themes`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ themes: Array.from(selectedThemes) }),
+      });
+      if (res.ok) {
+        themesTouched.current = false;
+        setUniverse(await res.json());
+      }
+    } finally {
+      setSavingThemes(false);
+    }
+  }
+
+  async function toggleAutoRun() {
+    if (!universe) return;
+    setAutoRunPending(true);
+    const next = !universe.autoRunEnabled;
+    try {
+      const res = await fetch(`/api/universe/${id}/auto-run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+      if (res.ok) setUniverse((u) => (u ? { ...u, autoRunEnabled: next } : u));
+    } finally {
+      setAutoRunPending(false);
     }
   }
 
@@ -126,6 +193,21 @@ export default function UniverseView({ id }: { id: string }) {
       : [];
   const filteredTopicRows = zipped.filter(({ result }) => tierFilter === "all" || result.priorityTier === tierFilter);
 
+  const isCategorizing = universe.categorizationStatus === "pending" || universe.categorizationStatus === "running";
+  const trackedKeywordTotal = universe.themeSummary
+    .filter((t) => selectedThemes.has(t.theme))
+    .reduce((s, t) => s + Math.min(t.keywordCount, 20), 0);
+  const themesChanged =
+    selectedThemes.size !== universe.trackedThemes.length ||
+    universe.trackedThemes.some((t) => !selectedThemes.has(t));
+
+  const brandNames = [universe.brand, ...competitorNames];
+  const trendSeries = brandNames.map((name, i) => ({
+    label: name,
+    color: SERIES_COLORS[i % SERIES_COLORS.length],
+    values: trend.map((p) => p.scores[name] ?? 0),
+  }));
+
   return (
     <div style={{ maxWidth: 900, margin: "28px auto 60px", padding: "0 16px" }}>
       <div
@@ -146,62 +228,207 @@ export default function UniverseView({ id }: { id: string }) {
           <span style={{ fontWeight: 700, fontSize: 18 }}>Universe — {universe.brand}</span>
         </div>
         <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 12.5, margin: "0 0 4px" }}>
-          {universe.domain} vs {competitorNames.join(", ") || "no competitors listed"} · {universe.topicCount}{" "}
-          tracked topics · {runs.length} run{runs.length === 1 ? "" : "s"} so far
+          {universe.domain} vs {competitorNames.join(", ") || "no competitors listed"} · {universe.topicCount.toLocaleString()}{" "}
+          keywords uploaded · {universe.trackedTopicCount} tracked for scanning · {runs.length} run{runs.length === 1 ? "" : "s"} so far
         </p>
         <p style={{ fontSize: 11.5, color: "var(--text-faint)", margin: "0 0 20px" }}>
           Created {new Date(universe.createdAt).toLocaleDateString()}
         </p>
 
-        <div style={{ display: "flex", gap: 14, marginBottom: 10, fontSize: 12.5 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            <input
-              type="radio"
-              name="promptMode"
-              checked={promptMode === "question"}
-              onChange={() => setPromptMode("question")}
-            />
-            Rewrite into shopper questions (recommended)
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            <input
-              type="radio"
-              name="promptMode"
-              checked={promptMode === "keyword"}
-              onChange={() => setPromptMode("keyword")}
-            />
-            Use keywords as-is
-          </label>
-        </div>
-        <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 14px" }}>
-          Applies to the next run — compare this run&rsquo;s visibility/mentions/citations/cited pages against a
-          previous run made with the other mode.
-        </p>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-          <button
-            onClick={runNow}
-            disabled={starting || Boolean(isRunning)}
+        {isCategorizing && (
+          <div
             style={{
-              background: starting || isRunning ? "var(--border)" : "var(--accent)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "10px 18px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: starting || isRunning ? "default" : "pointer",
-              fontFamily: "inherit",
+              border: "1px solid var(--border)",
+              background: "var(--bg-alt)",
+              padding: "14px 16px",
+              marginBottom: 24,
+              fontSize: 13,
             }}
           >
-            {isRunning ? "Running…" : starting ? "Starting…" : "Run now"}
-          </button>
-          {!run && !isRunning && (
-            <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
-              No run loaded yet — hit &ldquo;Run now&rdquo; to check this universe.
-            </span>
-          )}
-        </div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>
+              Categorizing {universe.topicCount.toLocaleString()} keywords…
+            </div>
+            <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 12.5 }}>
+              Sorting every keyword into Brand vs. real sub-categories (Skincare, Hair Care, etc.) — no search cost
+              yet, this is a cheap classification pass. This page checks back every few seconds; safe to leave open
+              or come back later.
+            </p>
+          </div>
+        )}
+
+        {universe.categorizationStatus === "error" && (
+          <div
+            style={{
+              border: "1px solid var(--danger)",
+              background: "var(--danger-bg)",
+              color: "var(--danger)",
+              padding: "12px 14px",
+              marginBottom: 24,
+              fontSize: 13,
+            }}
+          >
+            Categorization failed: {universe.categorizationError}
+          </div>
+        )}
+
+        {!isCategorizing && universe.themeSummary.length > 0 && (
+          <>
+            <h1 style={sectionHeading}>Universe Overview</h1>
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
+              Every uploaded keyword, grouped into themes. Pick which themes to track — only the top 20
+              highest-volume keywords per tracked theme actually get scanned, so cost stays flat no matter how
+              many thousand keywords you uploaded. Untracked themes stay visible here but never get scanned.
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 10 }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Track</th>
+                    <th style={th}>Theme</th>
+                    <th style={th}>Keywords</th>
+                    <th style={th}>Total volume</th>
+                    <th style={th}>Will scan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {universe.themeSummary.map((t) => (
+                    <tr key={t.theme} style={selectedThemes.has(t.theme) ? { background: "var(--good-bg)" } : undefined}>
+                      <td style={td}>
+                        <input
+                          type="checkbox"
+                          checked={selectedThemes.has(t.theme)}
+                          onChange={() => toggleTheme(t.theme)}
+                        />
+                      </td>
+                      <td style={{ ...td, fontWeight: 700 }}>{t.theme}</td>
+                      <td className="mono" style={td}>
+                        {t.keywordCount.toLocaleString()}
+                      </td>
+                      <td className="mono" style={td}>
+                        {t.totalVolume.toLocaleString()}
+                      </td>
+                      <td className="mono" style={{ ...td, color: "var(--text-muted)" }}>
+                        {selectedThemes.has(t.theme) ? Math.min(t.keywordCount, 20) : 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <button
+                onClick={saveTrackedThemes}
+                disabled={savingThemes || !themesChanged}
+                style={{
+                  background: !themesChanged ? "var(--border)" : "var(--accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "9px 16px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: !themesChanged ? "default" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {savingThemes ? "Saving…" : "Save tracked themes"}
+              </button>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                {selectedThemes.size} theme{selectedThemes.size === 1 ? "" : "s"} tracked · up to{" "}
+                {trackedKeywordTotal.toLocaleString()} keywords will be scanned per run
+              </span>
+            </div>
+          </>
+        )}
+
+        {!isCategorizing && (
+          <>
+            <div style={{ display: "flex", gap: 14, marginBottom: 10, fontSize: 12.5 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="promptMode"
+                  checked={promptMode === "question"}
+                  onChange={() => setPromptMode("question")}
+                />
+                Rewrite into shopper questions (recommended)
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="promptMode"
+                  checked={promptMode === "keyword"}
+                  onChange={() => setPromptMode("keyword")}
+                />
+                Use keywords as-is
+              </label>
+            </div>
+            <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 14px" }}>
+              Applies to the next run — compare this run&rsquo;s visibility/mentions/citations/cited pages against
+              a previous run made with the other mode.
+            </p>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
+              <button
+                onClick={runNow}
+                disabled={starting || Boolean(isRunning) || universe.trackedTopicCount === 0}
+                title={universe.trackedTopicCount === 0 ? "Track at least one theme above first" : undefined}
+                style={{
+                  background:
+                    starting || isRunning || universe.trackedTopicCount === 0 ? "var(--border)" : "var(--accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 18px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: starting || isRunning || universe.trackedTopicCount === 0 ? "default" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {isRunning
+                  ? "Running…"
+                  : starting
+                    ? "Starting…"
+                    : `Run now${universe.trackedTopicCount ? ` (${universe.trackedTopicCount} topics)` : ""}`}
+              </button>
+              {universe.trackedTopicCount === 0 && (
+                <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                  Track at least one theme above before running.
+                </span>
+              )}
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, cursor: "pointer", marginLeft: "auto" }}>
+                <input
+                  type="checkbox"
+                  checked={universe.autoRunEnabled}
+                  disabled={autoRunPending}
+                  onChange={toggleAutoRun}
+                />
+                Auto-run weekly (tracked themes only)
+              </label>
+            </div>
+            {universe.autoRunEnabled && (
+              <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: "0 0 14px" }}>
+                {universe.lastAutoRunAt
+                  ? `Last auto-run ${new Date(universe.lastAutoRunAt).toLocaleDateString()} — next one due about a week after.`
+                  : "Will run automatically about a week from now if you don't hit “Run now” first."}
+              </p>
+            )}
+            {runError && (
+              <div
+                style={{
+                  border: "1px solid var(--danger)",
+                  color: "var(--danger)",
+                  padding: "10px 12px",
+                  marginBottom: 14,
+                  fontSize: 13,
+                }}
+              >
+                {runError}
+              </div>
+            )}
+          </>
+        )}
 
         {isRunning && run && (
           <div style={{ marginBottom: 32 }}>
@@ -228,6 +455,17 @@ export default function UniverseView({ id }: { id: string }) {
           >
             Run failed: {run.error}
           </div>
+        )}
+
+        {trend.length >= 2 && (
+          <>
+            <h1 style={sectionHeading}>Visibility Trend</h1>
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
+              Visibility score per brand across every run so far ({trend.length} runs) — this fills in more with
+              every run, not just a single before/after.
+            </p>
+            <LineChart series={trendSeries} xLabels={trend.map((p) => new Date(p.createdAt).toLocaleDateString())} />
+          </>
         )}
 
         {runs.length > 1 && (
@@ -268,17 +506,19 @@ export default function UniverseView({ id }: { id: string }) {
               }}
             >
               <p style={{ margin: "0 0 6px" }}>
+                This is run <strong>#{runs.length}</strong>
+                {runs.length > 1 ? ` since ${new Date(runs[0].createdAt).toLocaleDateString()}` : ""}.{" "}
                 <strong>{summary.brand}</strong> ranks <strong>#{summary.brandRank}</strong> of{" "}
                 {summary.totalBrandsTracked} brands tracked, with a Visibility Score of{" "}
                 <strong>{summary.brandVisibilityScore}</strong>
                 {summary.brandRank === 1 ? (
-                  <> — the category leader across {summary.totalTopics} tracked topics.</>
+                  <> — the category leader across {summary.totalTopics} scanned topics.</>
                 ) : (
                   <>
                     {" "}
                     — <strong>{summary.gapToLeader}</strong> points behind category leader{" "}
                     <strong>{summary.overallLeader}</strong> ({summary.overallLeaderScore}), across{" "}
-                    {summary.totalTopics} tracked topics.
+                    {summary.totalTopics} scanned topics.
                   </>
                 )}
               </p>
@@ -404,9 +644,7 @@ export default function UniverseView({ id }: { id: string }) {
 
             <h1 style={sectionHeading}>2. Theme Breakdown</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
-              Topics rolled up by sub-category (e.g. Skincare, Lips, Hair Care) within this universe. If no
-              category was set on import, these themes were auto-grouped by Claude from the topics themselves —
-              nothing to hand-label.
+              The themes actually scanned this run — the ones you tracked above.
             </p>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 6 }}>
@@ -444,7 +682,7 @@ export default function UniverseView({ id }: { id: string }) {
 
             <h1 style={sectionHeading}>3. Topic-Level Breakdown</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
-              Every tracked topic, expandable — who was mentioned/cited (including every competitor site), the
+              Every scanned topic, expandable — who was mentioned/cited (including every competitor site), the
               actual question asked, and the real cited URLs per brand.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>

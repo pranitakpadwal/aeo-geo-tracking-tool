@@ -96,6 +96,36 @@ the one built for running a real topic/keyword list — CSV import, weekly
 reruns, trend/movement. It costs more per prompt (a search round-trip, not
 just a completion) and takes longer, by design.
 
+## Large keyword uploads & cost control (Universes only)
+
+A Universe accepts up to ~12,000 raw keywords, not just a hand-curated
+topic list — but scanning every keyword with a grounded `web_search` call
+would be prohibitively expensive at that scale. So it's a two-step flow:
+
+1. **Categorize (cheap).** Right after upload, `runCategorization()`
+   (`src/lib/universe.ts`) samples the highest-volume keywords to propose a
+   fixed theme list (`proposeThemes`, `src/lib/anthropic.ts` — always
+   includes a "Brand" theme), then classifies every keyword against that
+   list in batches (`classifyKeywordsAgainstThemes`). No `web_search` tool,
+   no per-keyword call — cost is roughly `sample + total/batch_size`, not
+   `total`. Rows that already had a `category` on import are left alone.
+2. **Track + run (the expensive step).** The universe page shows every
+   theme with its keyword count and total volume — this is free, just a
+   `GROUP BY`. You pick which themes matter; `setTrackedThemes()` then
+   marks only the top 20 highest-volume keywords *within* each tracked
+   theme as `tracked = 1`. `startUniverseRun()` only ever scans that
+   bounded set, so a run costs `(tracked themes × 20)` grounded calls
+   regardless of whether the universe holds 100 or 10,000 keywords.
+
+**Weekly auto-run** re-runs a universe's currently tracked themes on their
+own, without a manual "Run now." It's an in-process scheduler
+(`src/lib/scheduler.ts`), started once per server boot via
+`src/instrumentation.ts` (`register()` — see Next's [instrumentation
+docs](https://nextjs.org/docs/app/guides/instrumentation)); it checks
+hourly for universes with `auto_run_enabled` and at least one tracked theme
+whose `last_auto_run_at` is 7+ days old (or null). It only ever scans
+tracked themes — the same bounded set a manual run would.
+
 ## Report definitions (`src/lib/report.ts`)
 
 These are the exact terms the bulk-scan report uses — worth reading before

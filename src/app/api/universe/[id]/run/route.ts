@@ -43,7 +43,15 @@ export async function POST(
 
   // No topics/CSV in the request body — startUniverseRun rebuilds the run
   // input entirely from what's stored on the universe.
-  const runId = startUniverseRun(id, promptMode, owner.userId ?? user.id);
+  let runId: string;
+  try {
+    runId = startUniverseRun(id, promptMode, owner.userId ?? user.id);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to start run." },
+      { status: 400 }
+    );
+  }
 
   return NextResponse.json({ runId });
 }

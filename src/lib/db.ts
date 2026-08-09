@@ -138,26 +138,35 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `);
 
+// Adds a column if it's missing, tolerating "duplicate column name" from a
+// second process racing to add the same column at the same time (Next's
+// build step spins up several worker processes that each import this file
+// fresh against the same SQLite file — SQLite has no
+// "ADD COLUMN IF NOT EXISTS", so without this, whichever worker loses the
+// race crashes the build). Any other error still throws.
+function addColumnIfMissing(table: string, column: string, ddl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (cols.some((c) => c.name === column)) return;
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes("duplicate column name")) throw err;
+  }
+}
+
 // bulk_scans.universe_id: nullable so existing one-off bulk scans (created
 // before universes existed, or still run standalone via /bulk-scan) keep
-// working unchanged. Added defensively since SQLite has no
-// "ADD COLUMN IF NOT EXISTS".
-const bulkScanColumns = db.prepare(`PRAGMA table_info(bulk_scans)`).all() as { name: string }[];
-if (!bulkScanColumns.some((c) => c.name === "universe_id")) {
-  db.exec(`ALTER TABLE bulk_scans ADD COLUMN universe_id TEXT REFERENCES universes(id)`);
-}
+// working unchanged.
+addColumnIfMissing("bulk_scans", "universe_id", `universe_id TEXT REFERENCES universes(id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_bulk_scans_universe ON bulk_scans(universe_id);`);
 
 // category: the real sub-category (e.g. "Skincare", "Lips", "Hair Care") a
 // topic rolls up into — distinct from `type`, which in imported SEMrush-style
 // exports is a content-strategy label ("Baseline", "New Product/Ingredient"),
-// not a sub-vertical. Added defensively for the same reason as universe_id.
-for (const table of ["bulk_scan_topics", "universe_topics"] as const) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-  if (!cols.some((c) => c.name === "category")) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN category TEXT`);
-  }
-}
+// not a sub-vertical.
+addColumnIfMissing("bulk_scan_topics", "category", `category TEXT`);
+addColumnIfMissing("universe_topics", "category", `category TEXT`);
 
 // prompt_mode: "question" (default) rewrites each keyword into a natural
 // shopper question before asking Claude (e.g. "shampoo" -> "what's the best
@@ -165,21 +174,42 @@ for (const table of ["bulk_scan_topics", "universe_topics"] as const) {
 // keyword/topic string to Claude as-is, so you can see how visibility/
 // mentions/citations/cited-pages compare when the prompt is the bare
 // keyword vs. a realistic question built from it.
-if (!bulkScanColumns.some((c) => c.name === "prompt_mode")) {
-  db.exec(`ALTER TABLE bulk_scans ADD COLUMN prompt_mode TEXT NOT NULL DEFAULT 'question'`);
-}
+addColumnIfMissing("bulk_scans", "prompt_mode", `prompt_mode TEXT NOT NULL DEFAULT 'question'`);
 
 // user_id: nullable so pre-auth data (created before login existed) doesn't
 // break — it just shows up owned by nobody rather than 500ing. New
 // universes/bulk-scans always get one from the session going forward.
-if (!db.prepare(`PRAGMA table_info(universes)`).all().some((c) => (c as { name: string }).name === "user_id")) {
-  db.exec(`ALTER TABLE universes ADD COLUMN user_id TEXT REFERENCES users(id)`);
-}
+addColumnIfMissing("universes", "user_id", `user_id TEXT REFERENCES users(id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_universes_user ON universes(user_id);`);
-
-if (!bulkScanColumns.some((c) => c.name === "user_id")) {
-  db.exec(`ALTER TABLE bulk_scans ADD COLUMN user_id TEXT REFERENCES users(id)`);
-}
+addColumnIfMissing("bulk_scans", "user_id", `user_id TEXT REFERENCES users(id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_bulk_scans_user ON bulk_scans(user_id);`);
+
+// --- Large-upload universes (thousands of raw keywords) ---
+//
+// A universe can now be created from a raw keyword export (up to
+// MAX_KEYWORDS) instead of a hand-curated topic list. Scanning every
+// keyword with a real grounded (web-search) Claude call would be
+// prohibitively expensive at that scale, so the flow splits into two
+// cheap-then-selective steps instead of running everything:
+//
+//   1. Categorize (cheap, no web search): every uploaded keyword gets
+//      classified into a theme (category) — see runCategorization() in
+//      lib/universe.ts. `universe_topics.category` already existed;
+//      `categorization_status` on `universes` tracks that background job.
+//   2. Track + run (the expensive step): the user picks which themes
+//      matter; only the top-N-by-volume keywords *within* a tracked theme
+//      are marked `tracked = 1` and actually get scanned when you hit
+//      "Run now" — see setTrackedThemes() in lib/universe.ts. This caps
+//      run cost to (tracked themes × TOP_N_PER_THEME) regardless of how
+//      many thousand keywords the universe holds overall.
+addColumnIfMissing("universes", "categorization_status", `categorization_status TEXT`); // pending|running|complete|error, NULL for pre-existing small universes
+addColumnIfMissing("universes", "categorization_error", `categorization_error TEXT`);
+addColumnIfMissing("universes", "tracked_themes", `tracked_themes TEXT NOT NULL DEFAULT '[]'`); // JSON array of opted-in category values
+addColumnIfMissing("universes", "auto_run_enabled", `auto_run_enabled INTEGER NOT NULL DEFAULT 0`);
+addColumnIfMissing("universes", "last_auto_run_at", `last_auto_run_at TEXT`);
+// 1 = one of the top-N-by-volume keywords in a tracked theme; this is
+// exactly the set startUniverseRun() scans.
+addColumnIfMissing("universe_topics", "tracked", `tracked INTEGER NOT NULL DEFAULT 0`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_universe_topics_category ON universe_topics(universe_id, category);`);
 
 export default db;

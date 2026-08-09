@@ -83,3 +83,31 @@ export function buildReportForUniverseRun(universeId: string, runId: string): Un
 
   return { site, topics, movement, themes, citedPages };
 }
+
+export interface TrendPoint {
+  runId: string;
+  createdAt: string;
+  scores: Record<string, number>; // brand name -> visibilityScore for that run
+}
+
+/**
+ * Visibility score per brand across every completed run of a universe, in
+ * order — the series the trend chart plots and the "this is run #N, moving
+ * up/down over time" language in the summary reads from. Grows richer with
+ * every run instead of only ever comparing to the single previous one.
+ */
+export function buildTrendForUniverse(universeId: string): TrendPoint[] {
+  const runs = listBulkScansForUniverse(universeId).filter((r) => r.status === "complete");
+  return runs
+    .map((r) => {
+      const scan = getBulkScan(r.id);
+      if (!scan) return null;
+      const site = computeSiteReport(scan);
+      const scores: Record<string, number> = {};
+      site.brands.forEach((b) => {
+        scores[b.name] = b.visibilityScore;
+      });
+      return { runId: r.id, createdAt: r.createdAt, scores };
+    })
+    .filter((p): p is TrendPoint => p !== null);
+}

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isConfigured } from "@/lib/anthropic";
 import { getCurrentUser } from "@/lib/session";
-import { createUniverse, startUniverseRun } from "@/lib/universe";
+import { createUniverse, runCategorization } from "@/lib/universe";
 import type { UniverseInput } from "@/lib/types";
 
-const MAX_TOPICS = 500;
+// A universe now accepts a raw keyword export, not just a hand-curated
+// topic list — this is an upload cap (how many keywords you can bring in),
+// not a scan-cost cap. Nothing here gets a grounded Claude call until the
+// user tracks specific themes and hits "Run now" (see
+// /api/universe/[id]/tracked-themes and /run) — see lib/universe.ts for
+// the cost-control design.
+const MAX_KEYWORDS = 12000;
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -55,11 +61,11 @@ export async function POST(req: NextRequest) {
     : [];
 
   if (topics.length === 0) {
-    return NextResponse.json({ error: "At least one topic is required." }, { status: 400 });
+    return NextResponse.json({ error: "At least one topic/keyword is required." }, { status: 400 });
   }
-  if (topics.length > MAX_TOPICS) {
+  if (topics.length > MAX_KEYWORDS) {
     return NextResponse.json(
-      { error: `Too many topics (${topics.length}). Cap is ${MAX_TOPICS} per run — split into batches.` },
+      { error: `Too many keywords (${topics.length}). Cap is ${MAX_KEYWORDS} per universe — split into batches.` },
       { status: 400 }
     );
   }
@@ -77,10 +83,15 @@ export async function POST(req: NextRequest) {
   const input: UniverseInput = { name, brand, domain, competitors, topics };
   const id = createUniverse(input, user.id);
 
-  // Fire-and-forget, same pattern as POST /api/bulk-scan: this process is a
-  // persistent Node server, so the run keeps going after we respond. A
-  // client polls GET /api/universe/[id]/run/[runId]/report for progress.
-  const runId = startUniverseRun(id, undefined, user.id);
+  // Fire-and-forget, same pattern as a bulk-scan run: this process is a
+  // persistent Node server, so the categorization pass keeps going after
+  // we respond. createUniverse() already marked categorization_status
+  // 'complete' with no-op if every row came in pre-categorized, so this is
+  // safe to call unconditionally. No run is started here anymore — the
+  // user reviews the theme breakdown and picks what to track first.
+  runCategorization(id).catch((err) => {
+    console.error(`Categorization for universe ${id} failed:`, err);
+  });
 
-  return NextResponse.json({ id, runId });
+  return NextResponse.json({ id });
 }

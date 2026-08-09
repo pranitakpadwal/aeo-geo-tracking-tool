@@ -147,7 +147,15 @@ export interface UniverseInput {
 export interface UniverseTopicRecord extends UniverseTopicInput {
   id: number;
   universeId: string;
+  tracked: boolean; // one of the top-N-by-volume keywords in a tracked theme — the set that actually gets scanned
 }
+
+// pending: awaiting the background classification pass (large raw upload).
+// running: classification in progress. complete: every keyword has a
+// category, either from the classifier or because the user supplied one
+// on import (a small hand-curated universe skips straight to 'complete').
+// null: legacy data from before categorization existed.
+export type CategorizationStatus = "pending" | "running" | "complete" | "error" | null;
 
 export interface Universe {
   id: string;
@@ -156,6 +164,7 @@ export interface Universe {
   domain: string | null;
   competitors: CompetitorInput[];
   createdAt: string;
+  categorizationStatus: CategorizationStatus;
 }
 
 export interface UniverseRunSummary {
@@ -166,9 +175,27 @@ export interface UniverseRunSummary {
   promptMode: PromptMode;
 }
 
+/** One row of the pre-run "here's your universe" overview — aggregated
+ * across the *entire* uploaded keyword list (not just the tracked
+ * subset), so this stays cheap and complete even for a 10,000-row
+ * universe where only a handful of themes end up tracked. */
+export interface ThemeSummaryRow {
+  theme: string;
+  keywordCount: number;
+  totalVolume: number;
+  tracked: boolean; // opted in via setTrackedThemes — included in the next run + eligible for auto-run
+  trackedKeywordCount: number; // how many of this theme's keywords are actually in the scanned top-N (0 if not tracked)
+}
+
 export interface UniverseDetail extends Universe {
-  topics: UniverseTopicRecord[];
-  topicCount: number;
+  topics: UniverseTopicRecord[]; // the TRACKED subset only — bounded, safe to ship even for a huge universe
+  topicCount: number; // total uploaded keywords, tracked or not
+  trackedTopicCount: number; // topics.length, for convenience
+  themeSummary: ThemeSummaryRow[];
+  trackedThemes: string[];
+  autoRunEnabled: boolean;
+  lastAutoRunAt: string | null;
+  categorizationError: string | null;
   runs: UniverseRunSummary[];
   latestRunId: string | null;
 }
