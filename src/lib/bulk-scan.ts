@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import db from "./db";
-import { answerPromptGrounded, generateTopicQuestions } from "./anthropic";
+import { answerPromptGrounded, generateTopicQuestions, groupTopicsIntoThemes } from "./anthropic";
 import { attributeCitations, findCompetitorMentions, findMention } from "./analyze";
 import type {
   BulkScanDetail,
@@ -47,6 +47,36 @@ interface TopicRow {
   question: string | null;
 }
 
+interface CategoryRow {
+  id: number;
+  topic: string;
+  category: string | null;
+}
+
+/**
+ * If nobody supplied a `category` on any topic in this scan (the "just
+ * uploaded a flat list of queries" case), auto-group the whole list into a
+ * small number of themes via Claude and persist them as each topic's
+ * category — same column the theme breakdown/report already reads, so no
+ * downstream code needs to know whether a category was hand-supplied or
+ * auto-generated. Left alone (no-op) if even one topic already has a
+ * category — that's treated as the user's own grouping and respected as-is.
+ */
+async function autoGroupIfUncategorized(bulkScanId: string): Promise<void> {
+  const rows = db
+    .prepare(`SELECT id, topic, category FROM bulk_scan_topics WHERE bulk_scan_id = ? ORDER BY idx ASC`)
+    .all(bulkScanId) as CategoryRow[];
+
+  if (rows.length === 0 || rows.some((r) => r.category)) return;
+
+  const themes = await groupTopicsIntoThemes(rows.map((r) => r.topic));
+  const updateCategory = db.prepare(`UPDATE bulk_scan_topics SET category = ? WHERE id = ?`);
+  const updateMany = db.transaction(() => {
+    rows.forEach((r, i) => updateCategory.run(themes[i] || "Uncategorized", r.id));
+  });
+  updateMany();
+}
+
 /**
  * Runs the whole bulk scan: batch-generates a shopper question per topic,
  * then for each topic makes a grounded (real web search) call, detects
@@ -63,6 +93,8 @@ export async function runBulkScan(bulkScanId: string, input: BulkScanInput): Pro
   db.prepare(`UPDATE bulk_scans SET status = 'running' WHERE id = ?`).run(bulkScanId);
 
   try {
+    await autoGroupIfUncategorized(bulkScanId);
+
     const rows = db
       .prepare(`SELECT id, topic, question FROM bulk_scan_topics WHERE bulk_scan_id = ? ORDER BY idx ASC`)
       .all(bulkScanId) as TopicRow[];

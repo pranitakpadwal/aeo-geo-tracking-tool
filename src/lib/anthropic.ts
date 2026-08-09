@@ -141,6 +141,70 @@ export async function generateTopicQuestions(topics: string[]): Promise<string[]
   return parsed.questions;
 }
 
+/**
+ * Auto-groups a flat list of topics/queries into a small number of coherent
+ * themes — the "upload 100 keywords, we cluster them into ~5 groups so you
+ * can compare visibility score/mentions/citations/cited pages by group"
+ * behavior. Used whenever a topic list comes in with no `category` column,
+ * so grouping doesn't require the user to hand-label anything first.
+ *
+ * Returns one theme name per input topic, same order/length as `topics`.
+ * `targetGroups` is a target, not a hard cap — Claude may return slightly
+ * more/fewer if the topics don't cleanly split that way (e.g. a very small
+ * or very homogeneous list).
+ */
+export async function groupTopicsIntoThemes(topics: string[], targetGroups = 5): Promise<string[]> {
+  if (topics.length === 0) return [];
+
+  const response = await client().messages.create({
+    model: MODEL,
+    max_tokens: 4096,
+    output_config: {
+      effort: "medium",
+      format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            themeNames: {
+              type: "array",
+              items: { type: "string" },
+              description: `Short, human-readable theme/group names (aim for around ${targetGroups}), e.g. "Skincare", "Hair Care", "Fragrance".`,
+            },
+            assignments: {
+              type: "array",
+              items: { type: "integer" },
+              description:
+                "One entry per input topic, in the same order — the 0-based index into themeNames that topic belongs to.",
+            },
+          },
+          required: ["themeNames", "assignments"],
+          additionalProperties: false,
+        },
+      },
+    },
+    messages: [
+      {
+        role: "user",
+        content: [
+          `Below is a numbered list of ${topics.length} product/topic queries from a keyword-research export.`,
+          `Group them into around ${targetGroups} coherent themes based on what they're actually about (e.g. "Skincare", "Hair Care", "Fragrance", "Makeup") — fewer or more is fine if the data doesn't split evenly, but stay close to ${targetGroups} unless the list clearly needs otherwise.`,
+          `Every topic must be assigned to exactly one theme. Use concise, human-readable theme names a brand owner would recognize.`,
+          "",
+          topics.map((t, i) => `${i + 1}. ${t}`).join("\n"),
+        ].join("\n"),
+      },
+    ],
+  });
+
+  const text = extractText(response);
+  const parsed = JSON.parse(text) as { themeNames: string[]; assignments: number[] };
+  return topics.map((_, i) => {
+    const idx = parsed.assignments[i];
+    return parsed.themeNames[idx] ?? "Uncategorized";
+  });
+}
+
 export interface GroundedAnswer {
   text: string;
   citations: { url: string; title: string | null }[];

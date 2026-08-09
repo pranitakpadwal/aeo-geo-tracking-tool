@@ -245,11 +245,15 @@ export default function UniverseView({ id }: { id: string }) {
             </div>
 
             <h1 style={sectionHeading}>1. Site-Level Scorecard</h1>
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
+              Visibility score is one number to rank brands by: mention rate × 0.4 + citation rate × 0.6 — citation
+              (a real cited URL) counts for more since it&rsquo;s the harder, more business-relevant signal.
+            </p>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 6 }}>
                 <thead>
                   <tr>
-                    {["Brand", "Mention rate", "Citation rate", "Distinct URLs", "Share of citations", "Status"]
+                    {["Brand", "Visibility score", "Mention rate", "Citation rate", "Distinct URLs", "Share of citations", "Status"]
                       .concat(report.movement ? ["vs. last run"] : [])
                       .map((h) => (
                         <th key={h} style={th}>
@@ -269,6 +273,9 @@ export default function UniverseView({ id }: { id: string }) {
                         <td style={{ ...td, fontWeight: 700 }}>
                           {b.name}
                           {b.isBrand ? " (you)" : ""}
+                        </td>
+                        <td className="mono" style={{ ...td, fontWeight: 700 }}>
+                          {b.visibilityScore}
                         </td>
                         <td style={{ ...td, minWidth: 130 }}>
                           <div className="mono" style={{ marginBottom: 4 }}>
@@ -308,8 +315,9 @@ export default function UniverseView({ id }: { id: string }) {
 
             <h1 style={sectionHeading}>2. Theme Breakdown</h1>
             <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
-              Topics rolled up by sub-category (e.g. Skincare, Lips, Hair Care) within this universe — falls
-              back to the topic&rsquo;s type if no category was set on import.
+              Topics rolled up by sub-category (e.g. Skincare, Lips, Hair Care) within this universe. If no
+              category was set on import, these themes were auto-grouped by Claude from the topics themselves —
+              nothing to hand-label.
             </p>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 6 }}>
@@ -320,7 +328,7 @@ export default function UniverseView({ id }: { id: string }) {
                     <th style={th}>Leader</th>
                     {report.site.brands.map((b) => (
                       <th key={b.name} style={th}>
-                        {b.name} mentions / citations
+                        {b.name} — score (mentions / citations)
                       </th>
                     ))}
                   </tr>
@@ -335,7 +343,8 @@ export default function UniverseView({ id }: { id: string }) {
                       <td style={{ ...td, color: "var(--text-muted)" }}>{t.leader || "—"}</td>
                       {report.site.brands.map((b) => (
                         <td key={b.name} className="mono" style={td}>
-                          {t.perBrand[b.name]?.mentions ?? 0} / {t.perBrand[b.name]?.citations ?? 0}
+                          <strong>{t.perBrand[b.name]?.visibilityScore ?? 0}</strong> ({t.perBrand[b.name]?.mentions ?? 0} /{" "}
+                          {t.perBrand[b.name]?.citations ?? 0})
                         </td>
                       ))}
                     </tr>

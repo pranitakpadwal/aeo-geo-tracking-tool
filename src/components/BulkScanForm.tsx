@@ -135,7 +135,9 @@ export default function BulkScanForm() {
         <label style={labelStyle}>
           Topics CSV — column <span className="mono">topic</span> required; <span className="mono">category</span>,{" "}
           <span className="mono">type</span>, <span className="mono">priority_tier</span>,{" "}
-          <span className="mono">volume</span> optional (extra columns are ignored)
+          <span className="mono">volume</span> optional (extra columns are ignored). No{" "}
+          <span className="mono">category</span>? Leave it out entirely — we&rsquo;ll auto-group your topics into
+          themes with Claude before running.
         </label>
         <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={onFileChange} style={{ fontSize: 14 }} />
         {fileName && (

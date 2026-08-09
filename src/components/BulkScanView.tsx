@@ -157,11 +157,15 @@ export default function BulkScanView({ id }: { id: string }) {
             >
               1. Site-Level Scorecard
             </h1>
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
+              Visibility score is one number to rank brands by: mention rate × 0.4 + citation rate × 0.6 — citation
+              (a real cited URL) counts for more since it&rsquo;s the harder, more business-relevant signal.
+            </p>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 6 }}>
                 <thead>
                   <tr>
-                    {["Brand", "Mention rate", "Citation rate", "Distinct URLs", "Share of citations", "Status"]
+                    {["Brand", "Visibility score", "Mention rate", "Citation rate", "Distinct URLs", "Share of citations", "Status"]
                       .concat(report.movement ? ["vs. last run"] : [])
                       .map((h) => (
                         <th
@@ -191,6 +195,9 @@ export default function BulkScanView({ id }: { id: string }) {
                         <td style={{ padding: "7px 10px", border: "1px solid var(--border)", fontWeight: 700 }}>
                           {b.name}
                           {b.isBrand ? " (you)" : ""}
+                        </td>
+                        <td className="mono" style={{ padding: "7px 10px", border: "1px solid var(--border)", fontWeight: 700 }}>
+                          {b.visibilityScore}
                         </td>
                         <td style={{ padding: "7px 10px", border: "1px solid var(--border)", minWidth: 130 }}>
                           <div className="mono" style={{ marginBottom: 4 }}>
@@ -239,7 +246,65 @@ export default function BulkScanView({ id }: { id: string }) {
                 borderBottom: "3px solid var(--accent)",
               }}
             >
-              2. Topic-Level Breakdown
+              2. Theme Breakdown
+            </h1>
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: 11.5, margin: "0 0 14px" }}>
+              Your topics, grouped into themes. If you didn&rsquo;t supply a category on upload, Claude auto-grouped
+              them from the topics themselves — nothing to hand-label.
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 24 }}>
+                <thead>
+                  <tr>
+                    {["Theme", "Topics", "Leader"].concat(report.site.brands.map((b) => `${b.name} — score (mentions / citations)`)).map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          background: "var(--table-head)",
+                          color: "#fff",
+                          textAlign: "left",
+                          padding: "7px 10px",
+                          border: "1px solid var(--table-head)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.themes.map((t) => (
+                    <tr key={t.theme}>
+                      <td style={{ padding: "7px 10px", border: "1px solid var(--border)", fontWeight: 700 }}>{t.theme}</td>
+                      <td className="mono" style={{ padding: "7px 10px", border: "1px solid var(--border)" }}>
+                        {t.topicsCount}
+                      </td>
+                      <td style={{ padding: "7px 10px", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
+                        {t.leader || "—"}
+                      </td>
+                      {report.site.brands.map((b) => (
+                        <td key={b.name} className="mono" style={{ padding: "7px 10px", border: "1px solid var(--border)" }}>
+                          <strong>{t.perBrand[b.name]?.visibilityScore ?? 0}</strong> ({t.perBrand[b.name]?.mentions ?? 0} /{" "}
+                          {t.perBrand[b.name]?.citations ?? 0})
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h1
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                margin: "34px 0 4px",
+                paddingBottom: 8,
+                borderBottom: "3px solid var(--accent)",
+              }}
+            >
+              3. Topic-Level Breakdown
             </h1>
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
               {tiers.length > 0 && (

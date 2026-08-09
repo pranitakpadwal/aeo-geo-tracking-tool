@@ -17,6 +17,16 @@ export interface BrandCitationStats {
   citations: number; // prompts where a real cited URL matched this brand/competitor's domain
   citationRate: number; // %, 0-100
   distinctCitedUrls: string[];
+  visibilityScore: number; // 0-100, weighted mentionRate/citationRate — see round1(...) call site for the weights
+}
+
+/** Single score to rank/compare brands by, without forcing a reader to
+ * weigh mention rate vs citation rate themselves. Citation rate is weighted
+ * higher (0.6) than mention rate (0.4) — a real cited URL is the harder,
+ * more business-relevant signal (it's a click-through surface), a mention
+ * alone is reach/share. */
+function visibilityScore(mentionRate: number, citationRate: number): number {
+  return round1(mentionRate * 0.4 + citationRate * 0.6);
 }
 
 export interface SiteReport {
@@ -51,6 +61,7 @@ export interface BulkScanReport {
   site: SiteReport;
   topics: TopicReportRow[];
   movement: Movement | null;
+  themes: ThemeBreakdownRow[];
 }
 
 // --- Universe roll-ups: same source data as the topic report, grouped up a
@@ -59,10 +70,13 @@ export interface BulkScanReport {
 // extra LLM calls. ---
 
 export interface ThemeBreakdownRow {
-  theme: string; // the `category` (sub-vertical) the user supplied, falling back to `type` if no category was imported
+  theme: string; // the `category` (sub-vertical) the user supplied, falling back to `type`, falling back to Claude auto-grouping if neither was set
   topicsCount: number;
   leader: string | null;
-  perBrand: Record<string, { mentions: number; citations: number }>;
+  perBrand: Record<
+    string,
+    { mentions: number; citations: number; mentionRate: number; citationRate: number; visibilityScore: number }
+  >;
 }
 
 export interface CitedPageEntry {
@@ -79,10 +93,12 @@ export interface CitedPageEntry {
  * mentions/citations/leader up to that theme, same shape as the per-topic
  * report.
  *
- * Groups by the user-supplied `category` field when present — that's the
- * real sub-vertical. Falls back to `type` (usually a content-strategy label
- * like "Baseline"/"New Product") only when no category was imported, so the
- * breakdown still means something rather than being empty.
+ * Groups by the `category` field, which is either the user-supplied real
+ * sub-vertical, or — when nobody supplied one at all — a theme Claude
+ * auto-assigned at scan time (see autoGroupIfUncategorized() in
+ * bulk-scan.ts). Falls back further to `type` only in the unlikely case
+ * neither exists, so the breakdown still means something rather than being
+ * empty.
  */
 export function buildThemeBreakdown(scan: BulkScanDetail): ThemeBreakdownRow[] {
   const names = [scan.brand, ...scan.competitors.map((c) => c.name)];
@@ -96,7 +112,7 @@ export function buildThemeBreakdown(scan: BulkScanDetail): ThemeBreakdownRow[] {
 
   const rows: ThemeBreakdownRow[] = [];
   for (const [theme, topics] of groups) {
-    const perBrand: Record<string, { mentions: number; citations: number }> = {};
+    const perBrand: ThemeBreakdownRow["perBrand"] = {};
     for (const name of names) {
       let mentions = 0;
       let citations = 0;
@@ -109,7 +125,9 @@ export function buildThemeBreakdown(scan: BulkScanDetail): ThemeBreakdownRow[] {
           if ((t.competitorCitations[name] || []).length > 0) citations++;
         }
       }
-      perBrand[name] = { mentions, citations };
+      const mentionRate = topics.length ? round1((mentions / topics.length) * 100) : 0;
+      const citationRate = topics.length ? round1((citations / topics.length) * 100) : 0;
+      perBrand[name] = { mentions, citations, mentionRate, citationRate, visibilityScore: visibilityScore(mentionRate, citationRate) };
     }
 
     let leader: string | null = null;
@@ -209,16 +227,20 @@ function computeSiteReport(scan: BulkScanDetail): SiteReport {
       }
     }
 
+    const mentionRate = total ? round1((mentions / total) * 100) : 0;
+    const citationRate = total ? round1((citations / total) * 100) : 0;
+
     return {
       name,
       domain: isBrand ? scan.domain ?? undefined : scan.competitors.find((c) => c.name === name)?.domain,
       isBrand,
       promptsTotal: total,
       mentions,
-      mentionRate: total ? round1((mentions / total) * 100) : 0,
+      mentionRate,
       citations,
-      citationRate: total ? round1((citations / total) * 100) : 0,
+      citationRate,
       distinctCitedUrls: Array.from(urlSet),
+      visibilityScore: visibilityScore(mentionRate, citationRate),
     };
   });
 
@@ -289,6 +311,7 @@ export function buildReportForScan(scanId: string): BulkScanReport | null {
 
   const site = computeSiteReport(scan);
   const topics = computeTopicReport(scan);
+  const themes = buildThemeBreakdown(scan);
 
   const history = listBulkScansForBrand(scan.brand, scan.domain);
   const idx = history.findIndex((h) => h.id === scan.id);
@@ -296,11 +319,10 @@ export function buildReportForScan(scanId: string): BulkScanReport | null {
   const previousScan = previousRecord ? getBulkScan(previousRecord.id) : null;
   const movement = previousScan ? computeMovement(site, computeSiteReport(previousScan)) : null;
 
-  return { site, topics, movement };
+  return { site, topics, movement, themes };
 }
 
 export interface UniverseRunReport extends BulkScanReport {
-  themes: ThemeBreakdownRow[];
   citedPages: CitedPageEntry[];
 }
 
@@ -316,6 +338,7 @@ export function buildReportForUniverseRun(universeId: string, runId: string): Un
 
   const site = computeSiteReport(scan);
   const topics = computeTopicReport(scan);
+  const themes = buildThemeBreakdown(scan);
 
   const history = listBulkScansForUniverse(universeId).filter((r) => r.status === "complete");
   const idx = history.findIndex((h) => h.id === scan.id);
@@ -323,7 +346,6 @@ export function buildReportForUniverseRun(universeId: string, runId: string): Un
   const previousScan = previousRecord ? getBulkScan(previousRecord.id) : null;
   const movement = previousScan ? computeMovement(site, computeSiteReport(previousScan)) : null;
 
-  const themes = buildThemeBreakdown(scan);
   const citedPages = buildCitedPagesSummary(scan, previousScan);
 
   return { site, topics, movement, themes, citedPages };
