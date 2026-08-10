@@ -20,7 +20,6 @@ export function isPersistentStorage(): boolean {
 }
 
 if (!process.env.DATABASE_PATH) {
-  fs.mkdirSync(path.dirname(DEFAULT_PATH), { recursive: true });
   console.warn(
     "\n" +
       "⚠️  DATABASE_PATH is not set — using an ephemeral local path.\n" +
@@ -29,6 +28,20 @@ if (!process.env.DATABASE_PATH) {
       "    (e.g. Railway: Volume mounted at /data, DATABASE_PATH=/data/tracker.db). See README.\n"
   );
 }
+
+// Always ensure the parent directory exists — not just for the ephemeral
+// fallback path. This matters even when DATABASE_PATH points at a proper
+// mounted Volume: on Railway (and most container hosts), a Volume is only
+// attached at *runtime*, not during the build step, so `next build`
+// itself runs against a filesystem where e.g. /data doesn't exist yet.
+// This crashed a real deploy ("Cannot open database because the directory
+// does not exist") the moment DATABASE_PATH was set. Creating the
+// directory here is safe either way: during the build it just satisfies
+// better-sqlite3 so the build can finish; at actual runtime, the real
+// Volume gets mounted over this same path, so this line is a no-op there
+// (directory already exists) and the persistent file underneath is
+// untouched.
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 // Next's build step (and any multi-worker/multi-instance setup) opens this
 // same file from several processes at once. better-sqlite3's default
